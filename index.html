@@ -512,23 +512,21 @@ function renderShows(){
  document.getElementById('showRows').innerHTML=rows||'<tr><td colspan="8" class="empty">No shows found.</td></tr>';
  updateShowStatusButton();
 }
-function getSettings(){return{start:(data.settings&&data.settings.start)||'06:00',end:(data.settings&&data.settings.end)||'18:30',override:(data.settings&&data.settings.override)||[]}}
+// Request window is hardcoded: 06:00–19:00 IST every day.
+// Only Manager and Lead can submit outside this window.
+const REQUEST_WINDOW_START = 6 * 60;   // 06:00 in minutes
+const REQUEST_WINDOW_END   = 19 * 60;  // 19:00 in minutes
 function isAfterHours(){
  const now=new Date();
  const hm=now.getHours()*60+now.getMinutes();
- const s=getSettings();
- const [sh,sm]=s.start.split(':').map(Number);
- const [eh,em]=s.end.split(':').map(Number);
- return hm<(sh*60+sm)||hm>=(eh*60+em);
+ return hm<REQUEST_WINDOW_START||hm>=REQUEST_WINDOW_END;
 }
 function canAfterHours(){
  const p=data.people.find(x=>x.name===CURRENT_USER);
  if(!p)return false;
- const s=getSettings();
- return p.role==='Manager'||p.role==='Lead'||p.after===true||s.override.includes(CURRENT_USER);
+ return p.role==='Manager'||p.role==='Lead';
 }
 function checkRequestLock(){
- const s=getSettings();
  const afterHours=isAfterHours();
  const hasOverride=canAfterHours();
  const locked=afterHours&&!hasOverride;
@@ -538,11 +536,11 @@ function checkRequestLock(){
  const card=document.getElementById('requestCard');
  if(!el||!card)return;
  if(locked){
-  el.innerHTML='<div class="notice"><b>🔒 Request window is closed.</b> Window: '+s.start+'–'+s.end+' IST. Current time: <b>'+timeStr+'</b>. You do not have after-hours access.</div>';
+  el.innerHTML='<div class="notice"><b>🔒 Request window is closed.</b> Window: 6:00 AM – 7:00 PM IST. Current time: <b>'+timeStr+'</b>.</div>';
   card.style.opacity='0.45';
   card.style.pointerEvents='none';
  }else{
-  const reason=!afterHours?'Window is open ('+s.start+'–'+s.end+').':'You have after-hours override access.';
+  const reason=afterHours?'You have Manager / Lead access.':'Window open: 6:00 AM – 7:00 PM.';
   el.innerHTML='<div class="notice successNotice"><b>✓ Requests enabled.</b> '+reason+' Current time: <b>'+timeStr+'</b></div>';
   card.style.opacity='1';
   card.style.pointerEvents='auto';
