@@ -26,10 +26,10 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .nav .icon{width:20px;text-align:center;font-size:16px}
 .nav .lock{margin-left:auto;font-size:12px;opacity:.85}
 .navSeparator{height:1px;background:rgba(255,255,255,.1);margin:14px 6px}
-.profileArea{position:absolute;left:14px;right:14px;bottom:18px}
-.afterHours{border:1px solid rgba(160,175,206,.35);background:rgba(14,23,48,.45);padding:13px;border-radius:11px;margin-bottom:46px}
+.profileArea{position:absolute;left:14px;right:14px;bottom:18px;display:flex;flex-direction:column;gap:4px}
+.afterHours{border:1px solid rgba(160,175,206,.35);background:rgba(14,23,48,.45);padding:13px;border-radius:11px;margin-bottom:8px}
 .afterHours .title{font-size:12px;font-weight:700}.afterHours .state{color:#35d17d;font-size:12px;font-weight:700;margin-top:7px}.afterHours .until{color:#c3ccdd;font-size:11px;margin-top:3px}
-.user{position:absolute;bottom:0;left:2px;right:2px;display:flex;align-items:center;gap:9px}
+.user{display:flex;align-items:center;gap:9px}
 .userAvatar{width:36px;height:36px;border-radius:50%;background:#384564;display:grid;place-items:center;font-weight:800}.user strong{font-size:12px;display:block}.user small{color:#aebbd1;font-size:11px}
 .quickRaise{position:absolute;bottom:56px;left:0;right:0;border:0;background:linear-gradient(90deg,#7d45ef,#5727c8);color:#fff;padding:10px 12px;border-radius:9px;font-weight:750;font-size:12px}
 
@@ -352,7 +352,7 @@ function openPage(id){
  document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===id));
  renderAll();
 }
-function closeModal(id){document.getElementById(id).classList.remove('open')}
+function closeModal(id){const m=document.getElementById(id);if(m){m.classList.remove('open');m.style.display=''}}
 function showById(id){return data.shows.find(s=>s.id===id)}
 function taskById(id){return data.tasks.find(t=>t.id===id)}
 function fmt(d){return new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
@@ -624,9 +624,15 @@ function openPerson(){document.getElementById('personModal').classList.add('open
 function addPerson(){const name=document.getElementById('pName').value.trim(),email=document.getElementById('pEmail').value.trim(),role=document.getElementById('pRole').value;if(!name||!email){toast('Name and email are required');return}const id='U'+Date.now(),after=document.getElementById('pAfter').value==='Yes';data.people.push({id,name,email,role,after,active:true});log('Person Added',name,role);save();closeModal('personModal');renderAll();toast('Person added');apiWrite({action:'addPerson',id,name,email,role,after,user:CURRENT_USER})}
 function togglePerson(id){const p=data.people.find(x=>x.id===id);p.active=!p.active;log(p.active?'Person Activated':'Person Deactivated',p.name,p.role);save();renderAll();toast(p.active?'Person activated':'Person deactivated');apiWrite({action:'togglePerson',id,name:p.name,role:p.role,active:p.active,user:CURRENT_USER})}
 function timeline(showId){
+ console.log('[ShowOps] timeline clicked, showId=',showId,'shows count=',data.shows.length);
  try{
-  const s=showById(showId);
-  if(!s){toast('Show not found');return;}
+  let s=showById(showId);
+  // Fallback: if ID doesn't match (e.g. after Sheets sync changed IDs), search by name embedded in button
+  if(!s){
+   console.warn('[ShowOps] showById miss for',showId,'— IDs in data:',data.shows.map(x=>x.id));
+   toast('Show not found (ID: '+showId+'). Try refreshing the page.');
+   return;
+  }
   // Case-insensitive, trimmed match so Sheets name variations don't drop entries
   const sNameLower=s.name.trim().toLowerCase();
   const ev=data.activity.filter(a=>a.show&&a.show.trim().toLowerCase()===sNameLower).sort((a,b)=>new Date(b.t)-new Date(a.t));
@@ -695,11 +701,17 @@ function timeline(showId){
   }
   html+='</div>';
 
-  document.getElementById('taskModalBody').innerHTML=html;
-  document.getElementById('taskModal').classList.add('open');
+  const modalBody=document.getElementById('taskModalBody');
+  const modal=document.getElementById('taskModal');
+  if(!modalBody||!modal){console.error('[ShowOps] taskModal elements missing');alert('UI error: modal not found, please refresh');return;}
+  modalBody.innerHTML=html;
+  modal.classList.add('open');
+  modal.style.display='flex';
  }catch(e){
-  console.error('Timeline error:',e);
-  toast('Timeline error: '+e.message);
+  console.error('[ShowOps] Timeline error:',e);
+  const t=document.getElementById('toast');
+  if(t){t.textContent='Timeline error: '+e.message;t.style.display='block';clearTimeout(window.__to);window.__to=setTimeout(()=>t.style.display='none',3000);}
+  else{alert('Timeline error: '+e.message);}
  }
 }
 function syncSheet(){localStorage.setItem('showops_sheet_backup',JSON.stringify(data));toast('Prototype backup snapshot saved. Live Google Sheets sync is ready for integration.')}
