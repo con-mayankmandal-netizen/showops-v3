@@ -89,7 +89,13 @@ window.SHOWOPS_CONFIG = {
 <aside class="sidebar">
  <div class="brand"><span class="brandMark">✓</span><span>ShowOps</span></div>
  <div class="nav" id="nav"></div>
- <div class="profile"><b>Mayank</b><div class="copy"><small>Manager / Ops POC</small></div></div>
+ <div class="profileArea">
+   <div class="user" style="padding:10px 6px 6px">
+     <div class="userAvatar" id="sidebarAvatar">?</div>
+     <div><strong id="sidebarName">—</strong><small id="sidebarRole" style="color:#aebbd1;font-size:11px">Not signed in</small></div>
+   </div>
+   <button style="width:100%;border:0;background:transparent;color:#aebbd1;font-size:11px;padding:4px 6px;text-align:left;cursor:pointer;border-radius:6px" onclick="switchUser()">⇄ Switch user</button>
+ </div>
 </aside>
 <main class="main">
 
@@ -103,7 +109,7 @@ window.SHOWOPS_CONFIG = {
       <div class="searchWrap"><span class="searchIcon">⌕</span><input class="searchBox" id="globalSearch" placeholder="Search shows, tasks, people..."></div>
       <button class="toolIcon" title="Notifications">♧</button>
       <button class="toolIcon" title="Help">?</button>
-      <div class="profileTop"><div class="avatar">M</div><div><strong>Mayank</strong><small>Manager</small></div><span>⌄</span></div>
+      <div class="profileTop"><div class="avatar" id="topbarAvatar">?</div><div><strong id="topbarName">—</strong><small id="topbarRole">—</small></div><span onclick="switchUser()" style="cursor:pointer" title="Switch user">⌄</span></div>
     </div>
   </div>
 
@@ -249,6 +255,19 @@ window.SHOWOPS_CONFIG = {
 </main></div>
 
 <!-- MODALS -->
+<div class="modal open" id="identityModal" style="z-index:150">
+  <div class="modalBox" style="max-width:420px">
+    <div class="modalHead" style="margin-bottom:8px"><h2 style="margin:0">👋 Who are you?</h2></div>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 16px">Select your name so your actions are logged correctly in the activity feed and Google Sheets.</p>
+    <div class="field">
+      <label>Your Name *</label>
+      <select id="identitySelect" style="width:100%"><option value="">Select your name…</option></select>
+    </div>
+    <div class="notice" id="identityNotice" style="display:none"></div>
+    <button class="btn primary" style="margin-top:14px;width:100%;padding:12px" onclick="confirmIdentity()">Continue →</button>
+  </div>
+</div>
+
 <div class="modal" id="showModal"><div class="modalBox"><div class="modalHead"><h2 style="margin:0">Add New Show</h2><button class="close" onclick="closeModal('showModal')">×</button></div>
  <div class="notice">Show Type is mandatory. A show cannot be created without UK, EU or Other.</div>
  <div class="formgrid"><div class="field"><label>Show Name *</label><input id="newName"></div><div class="field"><label>Show Type *</label><select id="newType"><option value="">Select type</option><option>UK</option><option>EU</option><option>Other</option></select></div><div class="field"><label>Genre</label><input id="newGenre"></div><div class="field"><label>Language</label><input id="newLang"></div></div>
@@ -309,7 +328,7 @@ const seed={
  settings:{start:'06:00',end:'18:30',override:['Mayank','Rahul']}
 };
 let data=JSON.parse(localStorage.getItem('showops_v2')||'null')||seed;
-const CURRENT_USER='Mayank';
+let CURRENT_USER=localStorage.getItem('showops_user')||'';
 
 function save(){localStorage.setItem('showops_v2',JSON.stringify(data))}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(window.__to);window.__to=setTimeout(()=>t.style.display='none',2200)}
@@ -529,13 +548,53 @@ function togglePerson(id){const p=data.people.find(x=>x.id===id);p.active=!p.act
 function timeline(showId){const s=showById(showId),ev=data.activity.filter(a=>a.show===s.name);document.getElementById('taskModalBody').innerHTML=`<h3 style="margin-top:0">${s.name} <span>${badge(s.type)}</span></h3><div class="timeline">${ev.length?ev.map(a=>`<div class="event"><span class="dot"></span><div><b>${a.a}</b><div>${a.d}</div><small class="muted">${a.u} · ${fmt(a.t)}</small></div></div>`).join(''):'<div class="empty">No activity yet.</div>'}</div>`;document.getElementById('taskModal').classList.add('open')}
 function syncSheet(){localStorage.setItem('showops_sheet_backup',JSON.stringify(data));toast('Prototype backup snapshot saved. Live Google Sheets sync is ready for integration.')}
 function downloadBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-backup.json';a.click();URL.revokeObjectURL(a.href)}
+function updateUserUI(){
+  if(!CURRENT_USER)return;
+  const p=data.people.find(x=>x.name===CURRENT_USER);
+  const role=p?.role||'Team Member';
+  const initial=(CURRENT_USER[0]||'?').toUpperCase();
+  const sa=document.getElementById('sidebarAvatar');const sn=document.getElementById('sidebarName');const sr=document.getElementById('sidebarRole');
+  if(sa)sa.textContent=initial;if(sn)sn.textContent=CURRENT_USER;if(sr)sr.textContent=role;
+  const ta=document.getElementById('topbarAvatar');const tn=document.getElementById('topbarName');const tr=document.getElementById('topbarRole');
+  if(ta)ta.textContent=initial;if(tn)tn.textContent=CURRENT_USER;if(tr)tr.textContent=role;
+  const greet=document.querySelector('#dashboard .topLeft p');if(greet)greet.textContent='Welcome back, '+CURRENT_USER+' 👋';
+}
+function populateIdentityModal(){
+  const sel=document.getElementById('identitySelect');if(!sel)return;
+  sel.innerHTML='<option value="">Select your name…</option>'+data.people.filter(p=>p.active).map(p=>`<option value="${p.name}">${p.name} — ${p.role}</option>`).join('');
+}
+function confirmIdentity(){
+  const name=document.getElementById('identitySelect').value;
+  const notice=document.getElementById('identityNotice');
+  if(!name){notice.style.display='block';notice.textContent='Please select your name to continue.';return;}
+  CURRENT_USER=name;
+  localStorage.setItem('showops_user',name);
+  document.getElementById('identityModal').classList.remove('open');
+  updateUserUI();
+  renderAll();
+}
+function switchUser(){
+  localStorage.removeItem('showops_user');
+  CURRENT_USER='';
+  populateIdentityModal();
+  document.getElementById('identitySelect').value='';
+  document.getElementById('identityNotice').style.display='none';
+  document.getElementById('identityModal').classList.add('open');
+}
 function getSelectedShowStatuses(){return[...document.querySelectorAll('#showStatusMenu input[type="checkbox"]:checked')].map(x=>x.value)}
 function updateShowStatusButton(){const c=getSelectedShowStatuses();const btn=document.querySelector('#showStatusMulti .multiFilterBtn');if(btn)btn.textContent=c.length?c.length+' Status ▾':'All Status ▾'}
 function toggleStatusMenu(e){e.stopPropagation();document.getElementById('showStatusMenu').classList.toggle('open')}
 function selectAllShowStatuses(e){e.stopPropagation();document.querySelectorAll('#showStatusMenu input[type="checkbox"]').forEach(x=>x.checked=true);renderShows()}
 function clearShowStatuses(e){e.stopPropagation();document.querySelectorAll('#showStatusMenu input[type="checkbox"]').forEach(x=>x.checked=false);renderShows()}
 function downloadSheetBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-sheet-backup.json';a.click();URL.revokeObjectURL(a.href)}
-initNav();renderAll();
+initNav();
+populateIdentityModal();
+if(CURRENT_USER){
+  document.getElementById('identityModal').classList.remove('open');
+  updateUserUI();
+  renderAll();
+}
+// else: identity modal is already open (starts with class="modal open" in HTML)
 document.addEventListener('click',function(e){const box=document.getElementById('showStatusMulti');const menu=document.getElementById('showStatusMenu');if(box&&menu&&!box.contains(e.target))menu.classList.remove('open');});
 </script>
 
