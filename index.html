@@ -4,6 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>ShowOps v3.0 — Team Operations</title>
+<script>window.onGoogleLibraryLoad = function(){ if(typeof initGoogleAuth==='function') initGoogleAuth(); };</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
  --bg:#f6f8fc;--card:#fff;--ink:#172033;--muted:#667085;--line:#e7eaf0;
@@ -73,6 +75,17 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 @media(max-width:1200px){.cards{grid-template-columns:repeat(3,1fr)}.gridDash,.gridDashBottom{grid-template-columns:1fr}}
 @media(max-width:900px){.sidebar{width:78px}.brand .word,.nav .txt,.profileArea .copy,.afterHours,.quickRaise{display:none}.nav button{justify-content:center}.main{margin-left:78px;padding:18px}.searchBox{width:210px}}
 @media(max-width:650px){.cards{grid-template-columns:repeat(2,1fr)}.topbar{flex-direction:column}.topTools{width:100%}.searchBox{width:100%}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
+#loginOverlay{position:fixed;inset:0;background:var(--nav);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+#loginBox{background:#fff;border-radius:20px;padding:40px;max-width:420px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+#loginBox .loginBrand{display:inline-flex;align-items:center;gap:10px;font-size:22px;font-weight:800;margin-bottom:28px;color:var(--ink)}
+#loginBox .loginBrand span{width:38px;height:38px;border-radius:11px;background:#7140e5;display:inline-grid;place-items:center;color:#fff;font-size:18px;flex-shrink:0}
+#loginBox h2{margin:0 0 8px;font-size:20px;font-weight:800}
+#loginBox p{color:var(--muted);font-size:13px;margin:0 0 28px;line-height:1.6}
+#googleSignInBtn{display:flex;justify-content:center;min-height:44px}
+#loginMsg{font-size:12px;padding:12px 14px;border-radius:9px;margin-top:14px;text-align:left;line-height:1.5}
+#loginMsg.error{background:var(--red2);color:#ae2831}
+#loginMsg.info{background:var(--blue2);color:#1d56d3}
+#loginMsg.success{background:var(--green2);color:#166534}
 </style>
 </head>
 <body>
@@ -81,11 +94,12 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 window.SHOWOPS_CONFIG = {
   apiUrl: "https://script.google.com/macros/s/AKfycbzuQIMdRpy8-Q2BVgb04kQJ8BEzx9bOuCn5h0tTCcXZJ8oJZCoy-q42PHwckMiWVAfc/exec",
   useBackend: true,
-  pollMs: 10000
+  pollMs: 10000,
+  googleClientId: "YOUR_CLIENT_ID.apps.googleusercontent.com"
 };
 </script>
 
-<div class="app">
+<div class="app" id="mainApp" style="display:none">
 <aside class="sidebar">
  <div class="brand"><span class="brandMark">✓</span><span>ShowOps</span></div>
  <div class="nav" id="nav"></div>
@@ -94,7 +108,7 @@ window.SHOWOPS_CONFIG = {
      <div class="userAvatar" id="sidebarAvatar">?</div>
      <div><strong id="sidebarName">—</strong><small id="sidebarRole" style="color:#aebbd1;font-size:11px">Not signed in</small></div>
    </div>
-   <button style="width:100%;border:0;background:transparent;color:#aebbd1;font-size:11px;padding:4px 6px;text-align:left;cursor:pointer;border-radius:6px" onclick="switchUser()">⇄ Switch user</button>
+   <button style="width:100%;border:0;background:transparent;color:#aebbd1;font-size:11px;padding:4px 6px;text-align:left;cursor:pointer;border-radius:6px" onclick="signOut()">⇄ Sign out</button>
  </div>
 </aside>
 <main class="main">
@@ -109,7 +123,7 @@ window.SHOWOPS_CONFIG = {
       <div class="searchWrap"><span class="searchIcon">⌕</span><input class="searchBox" id="globalSearch" placeholder="Search shows, tasks, people..."></div>
       <button class="toolIcon" title="Notifications">♧</button>
       <button class="toolIcon" title="Help">?</button>
-      <div class="profileTop"><div class="avatar" id="topbarAvatar">?</div><div><strong id="topbarName">—</strong><small id="topbarRole">—</small></div><span onclick="switchUser()" style="cursor:pointer" title="Switch user">⌄</span></div>
+      <div class="profileTop"><div class="avatar" id="topbarAvatar">?</div><div><strong id="topbarName">—</strong><small id="topbarRole">—</small></div><span onclick="signOut()" style="cursor:pointer" title="Sign out">⌄</span></div>
     </div>
   </div>
 
@@ -254,19 +268,19 @@ window.SHOWOPS_CONFIG = {
 <div class="card" style="margin-top:14px"><div class="sectionTitle"><h2>Delete / Archive Show</h2><span class="badge red">Manager Only</span></div><div class="notice">Archive a show from the active Show Master. Historical requests, tasks and activity remain preserved.</div><div class="field"><label>Select Show</label><select id="deleteShowSelect"></select></div><button class="btn danger" style="margin-top:12px" onclick="deleteSelectedShow()">Delete / Archive Show</button></div></section>
 </main></div>
 
-<!-- MODALS -->
-<div class="modal open" id="identityModal" style="z-index:150">
-  <div class="modalBox" style="max-width:420px">
-    <div class="modalHead" style="margin-bottom:8px"><h2 style="margin:0">👋 Who are you?</h2></div>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 16px">Select your name so your actions are logged correctly in the activity feed and Google Sheets.</p>
-    <div class="field">
-      <label>Your Name *</label>
-      <select id="identitySelect" style="width:100%"><option value="">Select your name…</option></select>
-    </div>
-    <div class="notice" id="identityNotice" style="display:none"></div>
-    <button class="btn primary" style="margin-top:14px;width:100%;padding:12px" onclick="confirmIdentity()">Continue →</button>
+<!-- GOOGLE LOGIN OVERLAY -->
+<div id="loginOverlay">
+  <div id="loginBox">
+    <div class="loginBrand"><span>✓</span> ShowOps</div>
+    <h2>Sign in to access</h2>
+    <p>This dashboard is restricted to authorized team members only.<br>Sign in with your Google account to continue.</p>
+    <div id="googleSignInBtn"></div>
+    <div id="loginMsg" style="display:none"></div>
+    <p style="font-size:11px;color:var(--muted);margin:20px 0 0">Access issues? Ask your manager to add your email in People &amp; Access.</p>
   </div>
 </div>
+
+<!-- MODALS -->
 
 <div class="modal" id="showModal"><div class="modalBox"><div class="modalHead"><h2 style="margin:0">Add New Show</h2><button class="close" onclick="closeModal('showModal')">×</button></div>
  <div class="notice">Show Type is mandatory. A show cannot be created without UK, EU or Other.</div>
@@ -328,7 +342,7 @@ const seed={
  settings:{start:'06:00',end:'18:30',override:['Mayank','Rahul']}
 };
 let data=JSON.parse(localStorage.getItem('showops_v2')||'null')||seed;
-let CURRENT_USER=localStorage.getItem('showops_user')||'';
+let CURRENT_USER='';
 
 function save(){localStorage.setItem('showops_v2',JSON.stringify(data))}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(window.__to);window.__to=setTimeout(()=>t.style.display='none',2200)}
@@ -559,27 +573,73 @@ function updateUserUI(){
   if(ta)ta.textContent=initial;if(tn)tn.textContent=CURRENT_USER;if(tr)tr.textContent=role;
   const greet=document.querySelector('#dashboard .topLeft p');if(greet)greet.textContent='Welcome back, '+CURRENT_USER+' 👋';
 }
-function populateIdentityModal(){
-  const sel=document.getElementById('identitySelect');if(!sel)return;
-  sel.innerHTML='<option value="">Select your name…</option>'+data.people.filter(p=>p.active).map(p=>`<option value="${p.name}">${p.name} — ${p.role}</option>`).join('');
-}
-function confirmIdentity(){
-  const name=document.getElementById('identitySelect').value;
-  const notice=document.getElementById('identityNotice');
-  if(!name){notice.style.display='block';notice.textContent='Please select your name to continue.';return;}
-  CURRENT_USER=name;
-  localStorage.setItem('showops_user',name);
-  document.getElementById('identityModal').classList.remove('open');
+function showLoginMsg(html,type){const el=document.getElementById('loginMsg');el.innerHTML=html;el.className=type||'';el.style.display='block';}
+function showApp(){
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('mainApp').style.display='';
   updateUserUI();
   renderAll();
+  refreshFromGoogleSheet();
+  setInterval(refreshFromGoogleSheet, window.SHOWOPS_CONFIG.pollMs||10000);
 }
-function switchUser(){
+async function handleGoogleSignIn(response){
+  let payload;
+  try{
+    const b64=response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    payload=JSON.parse(atob(b64));
+  }catch(e){showLoginMsg('Could not read sign-in response. Please try again.','error');return;}
+  const email=payload.email;
+  let person=data.people.find(p=>p.email&&p.email.toLowerCase()===email.toLowerCase()&&p.active);
+  if(!person&&window.SHOWOPS_CONFIG.useBackend&&window.SHOWOPS_CONFIG.apiUrl){
+    showLoginMsg('Verifying access with server...','info');
+    try{
+      const result=await window.showOpsApi.state();
+      if(result&&result.data&&result.data.people){
+        const fresh=result.data.people;
+        person=fresh.find(p=>p.email&&p.email.toLowerCase()===email.toLowerCase()&&p.active);
+        if(person){data=result.data;localStorage.setItem('showops_v2',JSON.stringify(data));}
+      }
+    }catch(e){console.warn('ShowOps auth fetch failed:',e);}
+  }
+  if(!person){
+    showLoginMsg('<b>Access denied.</b> <b>'+email+'</b> is not in the authorized People &amp; Access list. Ask your manager to add you.','error');
+    return;
+  }
+  CURRENT_USER=person.name;
+  localStorage.setItem('showops_google_email',email);
+  localStorage.setItem('showops_user',person.name);
+  showApp();
+}
+function signOut(){
+  localStorage.removeItem('showops_google_email');
   localStorage.removeItem('showops_user');
   CURRENT_USER='';
-  populateIdentityModal();
-  document.getElementById('identitySelect').value='';
-  document.getElementById('identityNotice').style.display='none';
-  document.getElementById('identityModal').classList.add('open');
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('loginOverlay').style.display='';
+  document.getElementById('loginMsg').style.display='none';
+  if(window.google&&window.SHOWOPS_CONFIG.googleClientId){
+    google.accounts.id.disableAutoSelect();
+    google.accounts.id.initialize({client_id:window.SHOWOPS_CONFIG.googleClientId,callback:handleGoogleSignIn,auto_select:false});
+    google.accounts.id.renderButton(document.getElementById('googleSignInBtn'),{theme:'outline',size:'large',width:300,text:'signin_with'});
+  }
+}
+function initGoogleAuth(){
+  const cid=window.SHOWOPS_CONFIG.googleClientId;
+  if(!cid||cid.startsWith('YOUR_CLIENT_ID')){
+    showLoginMsg('Google Client ID not configured yet. Update <code>googleClientId</code> in SHOWOPS_CONFIG.','info');
+    return;
+  }
+  const cached=localStorage.getItem('showops_google_email');
+  if(cached){
+    const person=data.people.find(p=>p.email&&p.email.toLowerCase()===cached.toLowerCase()&&p.active);
+    if(person){CURRENT_USER=person.name;localStorage.setItem('showops_user',person.name);showApp();return;}
+    // cached email no longer authorized — fall through to sign-in
+    localStorage.removeItem('showops_google_email');
+    localStorage.removeItem('showops_user');
+  }
+  google.accounts.id.initialize({client_id:cid,callback:handleGoogleSignIn,auto_select:true});
+  google.accounts.id.renderButton(document.getElementById('googleSignInBtn'),{theme:'outline',size:'large',width:300,text:'signin_with'});
+  google.accounts.id.prompt();
 }
 function getSelectedShowStatuses(){return[...document.querySelectorAll('#showStatusMenu input[type="checkbox"]:checked')].map(x=>x.value)}
 function updateShowStatusButton(){const c=getSelectedShowStatuses();const btn=document.querySelector('#showStatusMulti .multiFilterBtn');if(btn)btn.textContent=c.length?c.length+' Status ▾':'All Status ▾'}
@@ -588,13 +648,9 @@ function selectAllShowStatuses(e){e.stopPropagation();document.querySelectorAll(
 function clearShowStatuses(e){e.stopPropagation();document.querySelectorAll('#showStatusMenu input[type="checkbox"]').forEach(x=>x.checked=false);renderShows()}
 function downloadSheetBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-sheet-backup.json';a.click();URL.revokeObjectURL(a.href)}
 initNav();
-populateIdentityModal();
-if(CURRENT_USER){
-  document.getElementById('identityModal').classList.remove('open');
-  updateUserUI();
-  renderAll();
-}
-// else: identity modal is already open (starts with class="modal open" in HTML)
+// GIS loads async; initGoogleAuth is called by window.onGoogleLibraryLoad when ready
+// If GIS is already cached and loaded synchronously, call it now
+if(window.google&&window.google.accounts){initGoogleAuth();}
 document.addEventListener('click',function(e){const box=document.getElementById('showStatusMulti');const menu=document.getElementById('showStatusMenu');if(box&&menu&&!box.contains(e.target))menu.classList.remove('open');});
 </script>
 
@@ -641,7 +697,7 @@ async function refreshFromGoogleSheet() {
   }
 }
 window.refreshFromGoogleSheet = refreshFromGoogleSheet;
-setInterval(refreshFromGoogleSheet, window.SHOWOPS_CONFIG.pollMs || 10000);
+// polling started in showApp() after authentication
 </script>
 
 </body></html>
