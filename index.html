@@ -507,7 +507,7 @@ function renderShows(){
   const st=showStatus(s.id);
   if(statuses.length&&!statuses.includes(st))return '';
   const t=latestTask(s.id),i=openIssueForShow(s.id);
-  return `<tr><td><b>${s.name}</b><div class="muted">${s.genre} · ${s.language}</div></td><td>${badge(s.type)}</td><td>${badge(st)}</td><td>${t?.message||'No request raised yet'}</td><td>${t?.assignee||'—'}</td><td>${i?badge(i.severity)+' '+i.issue:'—'}</td><td>${t?fmt(t.updated):'—'}</td><td><button class="btn small" onclick="timeline('${s.id}')">Timeline</button></td></tr>`;
+  return `<tr><td><b>${s.name}</b><div class="muted">${s.genre} · ${s.language}</div></td><td>${badge(s.type)}</td><td>${badge(st)}</td><td>${t?.message||'No request raised yet'}</td><td>${t?.assignee||'—'}</td><td>${i?badge(i.severity)+' '+i.issue:'—'}</td><td>${t?fmt(t.updated):'—'}</td><td><button class="btn small" onclick="openTimeline('${s.id}')">Timeline</button></td></tr>`;
  }).join('');
  document.getElementById('showRows').innerHTML=rows||'<tr><td colspan="8" class="empty">No shows found.</td></tr>';
  updateShowStatusButton();
@@ -586,7 +586,7 @@ function submitIssue(){const showId=document.getElementById('iShow').value,issue
 function renderStatus(){
  const rows=data.shows.filter(s=>s.active).map(s=>{const t=latestTask(s.id),i=openIssueForShow(s.id),st=showStatus(s.id);return {s,t,i,st};})
  .sort((a,b)=>{const ac=a.st==='Completed'?1:0,bc=b.st==='Completed'?1:0;return (ac-bc)||(new Date(b.t?.updated||0)-new Date(a.t?.updated||0));});
- document.getElementById('statusRows').innerHTML=rows.map(({s,t,i,st})=>`<tr style="${st==='Completed'?'opacity:.65':''}"><td><b>${s.name}</b></td><td>${badge(s.type)}</td><td>${badge(st)}</td><td>${t?.message||'No request raised yet'}</td><td>${t?.assignee||'—'}</td><td>${i?i.issue:'—'}</td><td>${t?fmt(t.updated):'—'}</td><td><button class="btn small" onclick="timeline('${s.id}')">View Timeline</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">No active shows.</td></tr>';
+ document.getElementById('statusRows').innerHTML=rows.map(({s,t,i,st})=>`<tr style="${st==='Completed'?'opacity:.65':''}"><td><b>${s.name}</b></td><td>${badge(s.type)}</td><td>${badge(st)}</td><td>${t?.message||'No request raised yet'}</td><td>${t?.assignee||'—'}</td><td>${i?i.issue:'—'}</td><td>${t?fmt(t.updated):'—'}</td><td><button class="btn small" onclick="openTimeline('${s.id}')">View Timeline</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">No active shows.</td></tr>';
 }
 function renderMyTasks(){
  let f=document.getElementById('myFilter')?.value||'All',ts=data.tasks.filter(t=>t.assignee===CURRENT_USER);
@@ -623,7 +623,7 @@ function addShow(){const name=document.getElementById('newName').value.trim(),ty
 function openPerson(){document.getElementById('personModal').classList.add('open')}
 function addPerson(){const name=document.getElementById('pName').value.trim(),email=document.getElementById('pEmail').value.trim(),role=document.getElementById('pRole').value;if(!name||!email){toast('Name and email are required');return}const id='U'+Date.now(),after=document.getElementById('pAfter').value==='Yes';data.people.push({id,name,email,role,after,active:true});log('Person Added',name,role);save();closeModal('personModal');renderAll();toast('Person added');apiWrite({action:'addPerson',id,name,email,role,after,user:CURRENT_USER})}
 function togglePerson(id){const p=data.people.find(x=>x.id===id);p.active=!p.active;log(p.active?'Person Activated':'Person Deactivated',p.name,p.role);save();renderAll();toast(p.active?'Person activated':'Person deactivated');apiWrite({action:'togglePerson',id,name:p.name,role:p.role,active:p.active,user:CURRENT_USER})}
-function timeline(showId){
+function openTimeline(showId){
  console.log('[ShowOps] timeline clicked, showId=',showId,'shows count=',data.shows.length);
  try{
   let s=showById(showId);
