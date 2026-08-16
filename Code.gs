@@ -107,13 +107,26 @@ function getState() {
     d:    r['Details']
   })).filter(a => a.t).reverse();
 
-  const settingsRaw = sheetToObjects(ss, SHEETS.SETTINGS);
+  // Read settings directly (bypass sheetToObjects) to get raw Date objects
+  // before they are String()-ified and lose their time information
   const settings = { start: '06:00', end: '18:30', override: [] };
-  settingsRaw.forEach(r => {
-    if (r['Key'] === 'Start_Time')          settings.start    = r['Value'];
-    if (r['Key'] === 'End_Time')            settings.end      = r['Value'];
-    if (r['Key'] === 'After_Hours_Override') settings.override = (r['Value']||'').split(',').map(s=>s.trim()).filter(Boolean);
-  });
+  const settingsSheet = ss.getSheetByName(SHEETS.SETTINGS);
+  if (settingsSheet) {
+    const sData = settingsSheet.getDataRange().getValues();
+    if (sData.length > 1) {
+      const hdrs = sData[0].map(h => String(h).trim());
+      const ki = hdrs.indexOf('Key'), vi = hdrs.indexOf('Value');
+      if (ki >= 0 && vi >= 0) {
+        for (let i = 1; i < sData.length; i++) {
+          const key = String(sData[i][ki]).trim();
+          const raw = sData[i][vi];
+          if (key === 'Start_Time')            settings.start    = parseSettingTime(raw);
+          if (key === 'End_Time')              settings.end      = parseSettingTime(raw);
+          if (key === 'After_Hours_Override')  settings.override = String(raw||'').split(',').map(s=>s.trim()).filter(Boolean);
+        }
+      }
+    }
+  }
 
   return { data: { shows, tasks, issues, people, activity, settings } };
 }
@@ -248,15 +261,44 @@ function updateRowWhere(sheet, keyCol, keyVal, updates) {
 }
 
 function upsertSetting(sheet, key, value) {
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === key) { sheet.getRange(i + 1, 2).setValue(value); return; }
+  const sVal = String(value);
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === key) {
+      const cell = sheet.getRange(i + 1, 2);
+      cell.setNumberFormat('@');   // force plain text — prevents time auto-format
+      cell.setValue(sVal);
+      return;
+    }
   }
-  sheet.appendRow([key, value]);
+  const nr = sheet.getLastRow() + 1;
+  sheet.getRange(nr, 1).setValue(key);
+  const cell = sheet.getRange(nr, 2);
+  cell.setNumberFormat('@');
+  cell.setValue(sVal);
 }
 
 function toBool(v) {
   return v === 'TRUE' || v === true || v === '1' || v === 'true';
+}
+
+// Convert a raw Sheets cell value (may be Date object, time serial, or "HH:MM" string) to "HH:MM"
+function parseSettingTime(raw) {
+  if (!raw && raw !== 0) return '06:00';
+  if (raw instanceof Date) {
+    return String(raw.getHours()).padStart(2,'0') + ':' + String(raw.getMinutes()).padStart(2,'0');
+  }
+  const s = String(raw).trim();
+  // Already "HH:MM" or "H:MM"
+  const hm = s.match(/^(\d{1,2}):(\d{2})/);
+  if (hm) return String(parseInt(hm[1])).padStart(2,'0') + ':' + hm[2];
+  // Sheets time serial stored as plain number (fraction of a day)
+  const n = parseFloat(s);
+  if (!isNaN(n) && n >= 0 && n < 1) {
+    const totalMin = Math.round(n * 1440);
+    return String(Math.floor(totalMin/60)).padStart(2,'0') + ':' + String(totalMin%60).padStart(2,'0');
+  }
+  return s;
 }
 
 // ── One-time setup: run this ONCE from the Apps Script editor ──
