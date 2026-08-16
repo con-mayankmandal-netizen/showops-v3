@@ -58,7 +58,10 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .sub{font-size:13px;color:var(--muted)}
 .page{display:none}.page.active{display:block}
 .btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 12px;border-radius:9px;font-weight:650}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger{background:var(--red);border-color:var(--red);color:#fff}.btn.small{font-size:11px;padding:7px 9px}
-.filterbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px}.filterbar input,.filterbar select,.field input,.field select,.field textarea{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;color:var(--ink)}
+.filterbar,.filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px;align-items:center}.filterbar input,.filterbar select,.filter input,.filter select,.field input,.field select,.field textarea{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;color:var(--ink)}
+.barRow{margin-bottom:10px}.barTop{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}.bar{height:8px;background:#e8efff;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;background:var(--blue);border-radius:999px;transition:width .3s}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.toggle{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:8px}.successNotice{background:var(--green2);color:#166534;padding:11px 12px;border-radius:10px;font-size:12px;margin-bottom:13px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}.field textarea{width:100%;min-height:105px;resize:vertical}.full{grid-column:1/-1}
 .notice{padding:11px 12px;border-radius:10px;background:#fff2d8;color:#925b07;font-size:12px;margin-bottom:13px}.notice.good{background:var(--green2);color:#166534}
 .modal{display:none;position:fixed;inset:0;background:rgba(2,6,23,.52);z-index:100;align-items:center;justify-content:center;padding:20px}.modal.open{display:flex}.modalBox{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}.modalHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.close{border:0;background:#eef1f6;border-radius:50%;width:32px;height:32px}
@@ -526,6 +529,12 @@ function togglePerson(id){const p=data.people.find(x=>x.id===id);p.active=!p.act
 function timeline(showId){const s=showById(showId),ev=data.activity.filter(a=>a.show===s.name);document.getElementById('taskModalBody').innerHTML=`<h3 style="margin-top:0">${s.name} <span>${badge(s.type)}</span></h3><div class="timeline">${ev.length?ev.map(a=>`<div class="event"><span class="dot"></span><div><b>${a.a}</b><div>${a.d}</div><small class="muted">${a.u} · ${fmt(a.t)}</small></div></div>`).join(''):'<div class="empty">No activity yet.</div>'}</div>`;document.getElementById('taskModal').classList.add('open')}
 function syncSheet(){localStorage.setItem('showops_sheet_backup',JSON.stringify(data));toast('Prototype backup snapshot saved. Live Google Sheets sync is ready for integration.')}
 function downloadBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-backup.json';a.click();URL.revokeObjectURL(a.href)}
+function getSelectedShowStatuses(){return[...document.querySelectorAll('#showStatusMenu input[type="checkbox"]:checked')].map(x=>x.value)}
+function updateShowStatusButton(){const c=getSelectedShowStatuses();const btn=document.querySelector('#showStatusMulti .multiFilterBtn');if(btn)btn.textContent=c.length?c.length+' Status ▾':'All Status ▾'}
+function toggleStatusMenu(e){e.stopPropagation();document.getElementById('showStatusMenu').classList.toggle('open')}
+function selectAllShowStatuses(e){e.stopPropagation();document.querySelectorAll('#showStatusMenu input[type="checkbox"]').forEach(x=>x.checked=true);renderShows()}
+function clearShowStatuses(e){e.stopPropagation();document.querySelectorAll('#showStatusMenu input[type="checkbox"]').forEach(x=>x.checked=false);renderShows()}
+function downloadSheetBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-sheet-backup.json';a.click();URL.revokeObjectURL(a.href)}
 initNav();renderAll();
 document.addEventListener('click',function(e){const box=document.getElementById('showStatusMulti');const menu=document.getElementById('showStatusMenu');if(box&&menu&&!box.contains(e.target))menu.classList.remove('open');});
 </script>
