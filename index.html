@@ -188,7 +188,12 @@ window.SHOWOPS_CONFIG = {
  <div class="topbar"><div><h1>Raise Request</h1><div class="sub">Writers can request work only for approved shows or Adhoc. Request window: 06:00–18:30.</div></div></div>
  <div id="requestLock"></div>
  <div class="card" id="requestCard"><div class="formgrid">
-  <div class="field"><label>Show Name *</label><select id="rShow"></select></div>
+  <div class="field" style="position:relative" id="rShowWrap">
+    <label>Show Name *</label>
+    <input type="text" id="rShowInput" placeholder="Search show..." autocomplete="off" oninput="filterShowDrop()" onfocus="openShowDrop()" style="width:100%;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;color:var(--ink);box-sizing:border-box">
+    <div id="rShowDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:9px;max-height:200px;overflow-y:auto;z-index:60;box-shadow:0 4px 15px rgba(0,0,0,.12);margin-top:3px"></div>
+    <input type="hidden" id="rShow">
+  </div>
   <div class="field"><label>Assign To</label><select id="rAssignee"></select></div>
   <div class="field full"><label>Task / Requirement *</label><textarea id="rTask" placeholder="Write the task / requirement..."></textarea></div>
   <div class="field"><label>Priority</label><select id="rHml"><option>High</option><option>Medium</option><option>Low</option></select></div>
@@ -379,14 +384,34 @@ function showStatus(showId){
 function log(action,show,details,user=CURRENT_USER){data.activity.unshift({t:new Date().toISOString(),u:user,a:action,show,d:details});save()}
 function apiWrite(payload){if(!window.SHOWOPS_CONFIG.useBackend||!window.SHOWOPS_CONFIG.apiUrl)return;window.showOpsApi.action(payload).catch(e=>console.warn('ShowOps API write failed:',e))}
 function renderRequests(){
- const rs=document.getElementById('rShow');if(!rs)return;
- const prevShow=rs.value;
- rs.innerHTML='<option value="adhoc">Adhoc</option>'+data.shows.filter(s=>s.active).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
- if(prevShow&&[...rs.options].some(o=>o.value===prevShow))rs.value=prevShow;
+ // Preserve current show selection across re-renders
+ const prevId=document.getElementById('rShow')?.value;
+ const prevName=document.getElementById('rShowInput')?.value;
+ if(prevId&&prevName){
+  const stillValid=prevId==='adhoc'||data.shows.some(s=>s.id===prevId&&s.active);
+  if(stillValid){const rs=document.getElementById('rShow');const ri=document.getElementById('rShowInput');if(rs)rs.value=prevId;if(ri)ri.value=prevName;}
+ }
  const ra=document.getElementById('rAssignee');if(!ra)return;
  const prevAssign=ra.value;
  ra.innerHTML='<option value="">Unassigned</option>'+teamNames().map(n=>`<option>${n}</option>`).join('');
  if(prevAssign&&[...ra.options].some(o=>o.textContent===prevAssign||o.value===prevAssign))ra.value=prevAssign;
+}
+function openShowDrop(){
+ document.getElementById('rShowDrop').style.display='block';
+ filterShowDrop();
+}
+function filterShowDrop(){
+ const q=(document.getElementById('rShowInput').value||'').toLowerCase();
+ const shows=[{id:'adhoc',name:'Adhoc'},...data.shows.filter(s=>s.active)];
+ const filtered=shows.filter(s=>!q||s.name.toLowerCase().includes(q));
+ document.getElementById('rShowDrop').innerHTML=filtered.length
+  ?filtered.map(s=>`<div style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line)" onmousedown="selectShow('${s.id}','${s.name.replace(/'/g,"&#39;")}')" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''">${s.name}</div>`).join('')
+  :'<div style="padding:9px 12px;color:var(--muted);font-size:13px">No shows found</div>';
+}
+function selectShow(id,name){
+ document.getElementById('rShow').value=id;
+ document.getElementById('rShowInput').value=name;
+ document.getElementById('rShowDrop').style.display='none';
 }
 function initNav(){
  const n=document.getElementById('nav');
@@ -805,7 +830,7 @@ initNav();
 // GIS loads async; initGoogleAuth is called by window.onGoogleLibraryLoad when ready
 // If GIS is already cached and loaded synchronously, call it now
 if(window.google&&window.google.accounts){initGoogleAuth();}
-document.addEventListener('click',function(e){const box=document.getElementById('showStatusMulti');const menu=document.getElementById('showStatusMenu');if(box&&menu&&!box.contains(e.target))menu.classList.remove('open');});
+document.addEventListener('click',function(e){const box=document.getElementById('showStatusMulti');const menu=document.getElementById('showStatusMenu');if(box&&menu&&!box.contains(e.target))menu.classList.remove('open');const wrap=document.getElementById('rShowWrap');const drop=document.getElementById('rShowDrop');if(wrap&&drop&&!wrap.contains(e.target))drop.style.display='none';});
 </script>
 
 <script>
