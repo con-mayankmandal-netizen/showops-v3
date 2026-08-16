@@ -627,9 +627,32 @@ function timeline(showId){
  try{
   const s=showById(showId);
   if(!s){toast('Show not found');return;}
-  const ev=data.activity.filter(a=>a.show===s.name).sort((a,b)=>new Date(b.t)-new Date(a.t));
+  // Case-insensitive, trimmed match so Sheets name variations don't drop entries
+  const sNameLower=s.name.trim().toLowerCase();
+  const ev=data.activity.filter(a=>a.show&&a.show.trim().toLowerCase()===sNameLower).sort((a,b)=>new Date(b.t)-new Date(a.t));
   const tasks=data.tasks.filter(t=>t.showId===showId).sort((a,b)=>new Date(b.updated)-new Date(a.updated));
   const issues=data.issues.filter(i=>i.showId===showId).sort((a,b)=>new Date(b.created)-new Date(a.created));
+
+  // Synthesise events from task data for anything not already in the activity log
+  // (covers tasks added directly in Sheets that never went through the JS log() call)
+  const evTimes=new Set(ev.map(a=>a.t));
+  tasks.forEach(function(t){
+   if(t.created&&!evTimes.has(t.created)){
+    ev.push({t:t.created,u:t.requester||'—',a:'Request Raised',show:s.name,d:t.task});
+    evTimes.add(t.created);
+   }
+   if(t.updated&&t.updated!==t.created&&!evTimes.has(t.updated)){
+    ev.push({t:t.updated,u:t.assignee||t.requester||'—',a:'Task Updated ('+t.status+')',show:s.name,d:t.message||t.task});
+    evTimes.add(t.updated);
+   }
+  });
+  issues.forEach(function(i){
+   if(i.created&&!evTimes.has(i.created)){
+    ev.push({t:i.created,u:i.raisedBy||'—',a:'Issue Raised ('+i.severity+')',show:s.name,d:i.issue});
+    evTimes.add(i.created);
+   }
+  });
+  ev.sort(function(a,b){return new Date(b.t)-new Date(a.t);});
 
   const titleEl=document.getElementById('taskModalTitle');
   if(titleEl)titleEl.textContent=s.name+' — Timeline';
