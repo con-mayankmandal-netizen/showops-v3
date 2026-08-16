@@ -564,7 +564,16 @@ async function refreshFromGoogleSheet() {
   try {
     const result = await window.showOpsApi.state();
     if (result && result.data) {
-      data = result.data;
+      const remote = result.data;
+      // Don't overwrite with empty Sheets — happens when setupSheets() just ran but no data yet
+      const hasRemoteData = (remote.shows && remote.shows.length > 0) ||
+                            (remote.tasks && remote.tasks.length > 0) ||
+                            (remote.people && remote.people.length > 0);
+      if (!hasRemoteData && (data.shows.length > 0 || data.tasks.length > 0)) {
+        console.warn("ShowOps: remote Sheets is empty, keeping local data. Use 'Push to Sheet' to seed it.");
+        return;
+      }
+      data = remote;
       localStorage.setItem("showops_v2", JSON.stringify(data));
       if (typeof renderAll === "function") renderAll();
     }
