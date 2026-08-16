@@ -346,7 +346,12 @@ let CURRENT_USER='';
 
 function save(){localStorage.setItem('showops_v2',JSON.stringify(data))}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(window.__to);window.__to=setTimeout(()=>t.style.display='none',2200)}
-function openPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===id));renderAll()}
+function openPage(id){
+ if(['performance','people','settings'].includes(id)&&roleLevel()<5){toast('Access denied — Manager only');return;}
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));
+ document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===id));
+ renderAll();
+}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 function showById(id){return data.shows.find(s=>s.id===id)}
 function taskById(id){return data.tasks.find(t=>t.id===id)}
@@ -373,7 +378,16 @@ function showStatus(showId){
 }
 function log(action,show,details,user=CURRENT_USER){data.activity.unshift({t:new Date().toISOString(),u:user,a:action,show,d:details});save()}
 function apiWrite(payload){if(!window.SHOWOPS_CONFIG.useBackend||!window.SHOWOPS_CONFIG.apiUrl)return;window.showOpsApi.action(payload).catch(e=>console.warn('ShowOps API write failed:',e))}
-function renderRequests(){const rs=document.getElementById('rShow');if(!rs)return;rs.innerHTML='<option value="adhoc">Adhoc</option>'+data.shows.filter(s=>s.active).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');const ra=document.getElementById('rAssignee');if(ra)ra.innerHTML='<option value="">Unassigned</option>'+teamNames().map(n=>`<option>${n}</option>`).join('')}
+function renderRequests(){
+ const rs=document.getElementById('rShow');if(!rs)return;
+ const prevShow=rs.value;
+ rs.innerHTML='<option value="adhoc">Adhoc</option>'+data.shows.filter(s=>s.active).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+ if(prevShow&&[...rs.options].some(o=>o.value===prevShow))rs.value=prevShow;
+ const ra=document.getElementById('rAssignee');if(!ra)return;
+ const prevAssign=ra.value;
+ ra.innerHTML='<option value="">Unassigned</option>'+teamNames().map(n=>`<option>${n}</option>`).join('');
+ if(prevAssign&&[...ra.options].some(o=>o.textContent===prevAssign||o.value===prevAssign))ra.value=prevAssign;
+}
 function initNav(){
  const n=document.getElementById('nav');
  n.innerHTML=NAV.map(x=>{
@@ -383,7 +397,7 @@ function initNav(){
  }).join('');
  document.querySelector('[data-nav="dashboard"]').classList.add('active');
 }
-function renderAll(){renderDashboard();renderShows();renderRequests();renderTasks();renderTeam();renderIssues();renderStatus();renderMyTasks();renderPerformance();renderPeople();renderActivity();renderSettings();renderDeleteShow();checkRequestLock()}
+function renderAll(){renderDashboard();renderShows();renderRequests();renderTasks();renderTeam();renderIssues();renderStatus();renderMyTasks();renderPerformance();renderPeople();renderActivity();renderSettings();renderDeleteShow();checkRequestLock();applyRoleUI();}
 function renderDashboard(){
  const open=data.tasks.filter(t=>t.status!=='Completed').length;
  const un=data.tasks.filter(t=>!t.assignee).length;
@@ -464,6 +478,29 @@ function relativeTime(x){
  if(hrs<24)return hrs+' hr ago';
  return Math.round(hrs/24)+' d ago';
 }
+// ── RBAC ──────────────────────────────────────────────────────────────────
+const ROLE_LEVEL={Manager:5,Lead:4,'Ops Person':3,Writer:2,Viewer:1};
+function getUserRole(){const p=data.people.find(x=>x.name===CURRENT_USER);return p?.role||'Viewer'}
+function roleLevel(){return ROLE_LEVEL[getUserRole()]||1}
+function can(action){
+ const lvl=roleLevel();
+ const gates={viewLocked:5,addShow:4,archiveShow:5,assignTask:4,bulkReassign:4,raiseIssue:3,addPerson:5,togglePerson:5,saveSettings:5,raiseRequest:2};
+ if(action==='updateTask') return lvl>=3;
+ return lvl>=(gates[action]??1);
+}
+function applyRoleUI(){
+ const lvl=roleLevel();
+ ['performance','people','settings'].forEach(id=>{const b=document.querySelector(`[data-nav="${id}"]`);if(b)b.style.display=lvl>=5?'':'none';});
+ document.querySelectorAll('#shows .topbar .btn.primary').forEach(b=>b.style.display=can('addShow')?'':'none');
+ document.querySelectorAll('#issues .topbar .btn.danger').forEach(b=>b.style.display=can('raiseIssue')?'':'none');
+ document.querySelectorAll('#people .topbar .btn.primary').forEach(b=>b.style.display=can('addPerson')?'':'none');
+ const reqCard=document.getElementById('requestCard');if(reqCard)reqCard.style.display=can('raiseRequest')?'':'none';
+ const reqLock=document.getElementById('requestLock');
+ if(reqLock&&!can('raiseRequest'))reqLock.innerHTML='<div class="notice"><b>🔒 View-only access.</b> Your role ('+getUserRole()+') does not have permission to raise requests.</div>';
+ document.querySelectorAll('#settings .btn.primary').forEach(b=>b.style.display=can('saveSettings')?'':'none');
+ document.querySelectorAll('#settings .btn.danger').forEach(b=>b.style.display=can('archiveShow')?'':'none');
+ document.querySelectorAll('#settings #deleteShowSelect').forEach(el=>el.style.display=can('archiveShow')?'':'none');
+}
 function renderShows(){
  const q=(document.getElementById('showSearch')?.value||'').toLowerCase(),tf=document.getElementById('showTypeFilter')?.value||'All Types';
  const statuses=getSelectedShowStatuses();
@@ -497,7 +534,8 @@ function renderTasks(){
  const q=(document.getElementById('taskSearch')?.value||'').toLowerCase(),mf=document.getElementById('taskMemberFilter')?.value||'All People',sf=document.getElementById('taskStatusFilter')?.value||'All Status',pf=document.getElementById('taskPFilter')?.value||'All P Levels';
  document.getElementById('taskMemberFilter').innerHTML='<option>All People</option>'+['Unassigned',...teamNames()].map(x=>`<option>${x}</option>`).join('');document.getElementById('taskMemberFilter').value=mf;
  const ts=data.tasks.filter(t=>(t.task+' '+(showById(t.showId)?.name||'Adhoc')).toLowerCase().includes(q)&&(mf==='All People'||(t.assignee||'Unassigned')===mf)&&(sf==='All Status'||t.status===sf)&&(pf==='All P Levels'||t.p===pf));
- document.getElementById('taskRows').innerHTML=ts.map(t=>`<tr><td><input type="checkbox" class="selTask" value="${t.id}"></td><td>${showById(t.showId)?.name||'Adhoc'}</td><td><b>${t.task}</b><div class="muted">${t.requester}</div></td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td><td>${t.high?'🔥 Yes':'—'}</td><td><select onchange="assign('${t.id}',this.value)"><option value="">Unassigned</option>${teamNames().map(n=>`<option ${t.assignee===n?'selected':''}>${n}</option>`).join('')}</select></td><td>${badge(t.status)}</td><td>${day(t.deadline)}</td><td><button class="btn small" onclick="updateTask('${t.id}')">${t.status==='Completed'?'Reopen':'Update'}</button></td></tr>`).join('')||'<tr><td colspan="10" class="empty">No tasks found.</td></tr>';
+ const canAssign=can('assignTask'),canUpdate=can('updateTask');
+ document.getElementById('taskRows').innerHTML=ts.map(t=>`<tr><td><input type="checkbox" class="selTask" value="${t.id}"></td><td>${showById(t.showId)?.name||'Adhoc'}</td><td><b>${t.task}</b><div class="muted">${t.requester}</div></td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td><td>${t.high?'🔥 Yes':'—'}</td><td>${canAssign?`<select onchange="assign('${t.id}',this.value)"><option value="">Unassigned</option>${teamNames().map(n=>`<option ${t.assignee===n?'selected':''}>${n}</option>`).join('')}</select>`:(t.assignee||'<span class="muted">Unassigned</span>')}</td><td>${badge(t.status)}</td><td>${day(t.deadline)}</td><td>${canUpdate?`<button class="btn small" onclick="updateTask('${t.id}')">${t.status==='Completed'?'Reopen':'Update'}</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">No tasks found.</td></tr>';
 }
 function teamNames(){return data.people.filter(p=>p.active&&['Manager','Ops Person','Writer'].includes(p.role)).map(p=>p.name)}
 function assign(id,name){const t=taskById(id);t.assignee=name;t.status=name?(t.status==='Unassigned'?'Assigned':t.status):'Unassigned';t.updated=new Date().toISOString();log('Task Assigned',showById(t.showId)?.name||'Adhoc',name||'Unassigned');save();renderAll();toast(name?'Task assigned to '+name:'Task unassigned');apiWrite({action:'assignTask',id,assignee:name,status:t.status,updated:t.updated,showName:showById(t.showId)?.name||'Adhoc',user:CURRENT_USER})}
@@ -510,7 +548,7 @@ function renderTeam(){
  const q=(document.getElementById('teamSearch')?.value||'').toLowerCase();const ts=data.tasks.filter(t=>(selected==='All Team'||t.assignee===selected)&&(t.task+' '+(showById(t.showId)?.name||'')).toLowerCase().includes(q));const active=ts.filter(t=>t.status!=='Completed').length;
  document.getElementById('teamKpis').innerHTML=(selected==='All Team'?[['People',teamNames().length],['Open Tasks',data.tasks.filter(t=>t.assignee&&t.status!=='Completed').length],['Unassigned',data.tasks.filter(t=>!t.assignee).length],['High Priority',data.tasks.filter(t=>t.high&&t.status!=='Completed').length],['Blocked',data.tasks.filter(t=>t.status==='Blocked').length],['Completed',data.tasks.filter(t=>t.status==='Completed').length]]:[['Person',selected],['Open Tasks',active],['Completed',ts.filter(t=>t.status==='Completed').length],['High Priority',ts.filter(t=>t.high).length],['P0',ts.filter(t=>t.p==='P0').length],['Overdue',ts.filter(t=>new Date(t.deadline)<new Date('2026-08-15')&&t.status!=='Completed').length]]).map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('');
  document.getElementById('teamSummary').textContent=selected==='All Team'?'Select a team member to focus the queue, then reassign individual or multiple tasks.':`${selected} currently has ${ts.length} task(s) in this queue.`;
- document.getElementById('teamRows').innerHTML=ts.sort(prioritySort).map(t=>`<tr><td>${showById(t.showId)?.name||'Adhoc'}</td><td><b>${t.task}</b></td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td><td>${t.high?'🔥 Yes':'—'}</td><td>${badge(t.status)}</td><td>${day(t.deadline)}</td><td><button class="btn small" onclick="reassignOne('${t.id}')">Reassign</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">No tasks.</td></tr>';
+ document.getElementById('teamRows').innerHTML=ts.sort(prioritySort).map(t=>`<tr><td>${showById(t.showId)?.name||'Adhoc'}</td><td><b>${t.task}</b></td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td><td>${t.high?'🔥 Yes':'—'}</td><td>${badge(t.status)}</td><td>${day(t.deadline)}</td><td>${can('assignTask')?`<button class="btn small" onclick="reassignOne('${t.id}')">Reassign</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No tasks.</td></tr>';
 }
 function reassignOne(id){const t=taskById(id),who=prompt('Assign to:\\n'+teamNames().join(', '));if(!who||!teamNames().includes(who))return;assign(id,who)}
 function renderIssues(){
@@ -540,15 +578,16 @@ function renderMyTasks(){
    if(table)table.parentNode.insertBefore(stat,table);
  }
  stat.innerHTML=`<b>${activeCount}</b> active task(s) · <b>${completedCount}</b> completed task(s) at bottom`;
+ const canMyUpdate=can('updateTask')||(getUserRole()==='Writer');
  document.getElementById('myRows').innerHTML=ts.map(t=>`<tr style="${t.status==='Completed'?'opacity:.62':''}">
  <td><b>${t.task}</b></td><td>${showById(t.showId)?.name||'Adhoc'}</td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td>
  <td>${t.high?'🔥 Yes':'—'}</td><td>${day(t.deadline)}</td><td>${badge(t.status)}</td>
- <td><button class="btn small" onclick="updateTask('${t.id}')">${t.status==='Completed'?'Reopen':'Update'}</button></td>
+ <td>${canMyUpdate?`<button class="btn small" onclick="updateTask('${t.id}')">${t.status==='Completed'?'Reopen':'Update'}</button>`:'—'}</td>
  </tr>`).join('')||'<tr><td colspan="8" class="empty">No tasks.</td></tr>';
 }
 function renderWorkload(id){const counts=Object.fromEntries(teamNames().map(n=>[n,data.tasks.filter(t=>t.assignee===n&&t.status!=='Completed').length]));counts['Unassigned']=data.tasks.filter(t=>!t.assignee).length;const max=Math.max(...Object.values(counts),1);document.getElementById(id).innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="barRow"><div class="barTop"><span>${n}</span><b>${c}</b></div><div class="bar"><i style="width:${Math.max(4,c/max*100)}%"></i></div></div>`).join('')}
 function renderPerformance(){const c=data.tasks.filter(t=>t.status==='Completed').length;document.getElementById('perfKpis').innerHTML=[['Tasks Completed',c],['Open Tasks',data.tasks.length-c],['Completion Rate',Math.round(c/data.tasks.length*100)+'%'],['Open Blockers',data.issues.filter(i=>['Open','Investigating'].includes(i.status)).length],['High Priority Open',data.tasks.filter(t=>t.high&&t.status!=='Completed').length],['Unassigned',data.tasks.filter(t=>!t.assignee).length]].map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('');const vals=teamNames().map(n=>[n,data.tasks.filter(t=>t.assignee===n&&t.status==='Completed').length]);const mx=Math.max(...vals.map(x=>x[1]),1);document.getElementById('throughput').innerHTML=vals.map(x=>`<div class="barRow"><div class="barTop"><span>${x[0]}</span><b>${x[1]}</b></div><div class="bar"><i style="width:${Math.max(5,x[1]/mx*100)}%"></i></div></div>`).join('');renderWorkload('perfLoad');document.getElementById('weekRows').innerHTML=[['Aug 10–16',data.tasks.length,c,data.issues.filter(i=>i.status!=='Resolved').length,Math.round(c/data.tasks.length*100)+'%','1.7 days'],['Aug 3–9',42,38,4,'90%','1.6 days'],['Jul 27–Aug 2',36,33,3,'92%','1.5 days']].map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}
-function renderPeople(){document.getElementById('peopleRows').innerHTML=data.people.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.email}</td><td>${badge(p.role)}</td><td>${p.after?'✅':'—'}</td><td>${p.active?badge('Active'):badge('Inactive')}</td><td><button class="btn small" onclick="togglePerson('${p.id}')">${p.active?'Deactivate':'Activate'}</button></td></tr>`).join('')}
+function renderPeople(){document.getElementById('peopleRows').innerHTML=data.people.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.email}</td><td>${badge(p.role)}</td><td>${p.after?'✅':'—'}</td><td>${p.active?badge('Active'):badge('Inactive')}</td><td>${can('togglePerson')?`<button class="btn small" onclick="togglePerson('${p.id}')">${p.active?'Deactivate':'Activate'}</button>`:'—'}</td></tr>`).join('')}
 function renderActivity(){document.getElementById('activityRows').innerHTML=data.activity.map(a=>`<tr><td>${fmt(a.t)}</td><td>${a.u}</td><td>${a.a}</td><td>${a.show}</td><td>${a.d}</td></tr>`).join('')}
 function renderDeleteShow(){const el=document.getElementById('deleteShowSelect');if(!el)return;el.innerHTML='<option value="">Select show...</option>'+data.shows.filter(s=>s.active).map(s=>`<option value="${s.id}">${s.name} — ${s.type}</option>`).join('');}
 function deleteSelectedShow(){const id=document.getElementById('deleteShowSelect')?.value;if(!id){toast('Select a show first');return}const s=showById(id);if(!s)return;const typed=prompt(`Type "${s.name}" to confirm archiving this show.`);if(typed!==s.name){toast('Delete cancelled');return}s.active=false;log('Show Archived',s.name,'Removed from active Show Master by Manager');save();renderAll();toast('Show archived');apiWrite({action:'archiveShow',id,name:s.name,user:CURRENT_USER})}
@@ -559,7 +598,28 @@ function addShow(){const name=document.getElementById('newName').value.trim(),ty
 function openPerson(){document.getElementById('personModal').classList.add('open')}
 function addPerson(){const name=document.getElementById('pName').value.trim(),email=document.getElementById('pEmail').value.trim(),role=document.getElementById('pRole').value;if(!name||!email){toast('Name and email are required');return}const id='U'+Date.now(),after=document.getElementById('pAfter').value==='Yes';data.people.push({id,name,email,role,after,active:true});log('Person Added',name,role);save();closeModal('personModal');renderAll();toast('Person added');apiWrite({action:'addPerson',id,name,email,role,after,user:CURRENT_USER})}
 function togglePerson(id){const p=data.people.find(x=>x.id===id);p.active=!p.active;log(p.active?'Person Activated':'Person Deactivated',p.name,p.role);save();renderAll();toast(p.active?'Person activated':'Person deactivated');apiWrite({action:'togglePerson',id,name:p.name,role:p.role,active:p.active,user:CURRENT_USER})}
-function timeline(showId){const s=showById(showId),ev=data.activity.filter(a=>a.show===s.name);document.getElementById('taskModalBody').innerHTML=`<h3 style="margin-top:0">${s.name} <span>${badge(s.type)}</span></h3><div class="timeline">${ev.length?ev.map(a=>`<div class="event"><span class="dot"></span><div><b>${a.a}</b><div>${a.d}</div><small class="muted">${a.u} · ${fmt(a.t)}</small></div></div>`).join(''):'<div class="empty">No activity yet.</div>'}</div>`;document.getElementById('taskModal').classList.add('open')}
+function timeline(showId){
+ const s=showById(showId);
+ const ev=data.activity.filter(a=>a.show===s.name).sort((a,b)=>new Date(b.t)-new Date(a.t));
+ const tasks=data.tasks.filter(t=>t.showId===showId).sort((a,b)=>new Date(b.updated)-new Date(a.updated));
+ const issues=data.issues.filter(i=>i.showId===showId).sort((a,b)=>new Date(b.created)-new Date(a.created));
+ document.getElementById('taskModalBody').innerHTML=`
+  <h3 style="margin-top:0">${s.name} <span>${badge(s.type)}</span></h3>
+  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+   <span class="badge blue">${tasks.length} task(s)</span>
+   <span class="badge red">${issues.length} issue(s)</span>
+   <span class="badge gray">${ev.length} activity events</span>
+  </div>
+  ${tasks.length?`<div style="margin-bottom:14px"><h4 style="margin:0 0 8px;font-size:13px">Tasks</h4>
+   <table class="table" style="font-size:12px"><thead><tr><th>Task</th><th>Assignee</th><th>Status</th><th>Updated</th></tr></thead><tbody>
+   ${tasks.map(t=>`<tr><td><b>${t.task}</b></td><td>${t.assignee||'—'}</td><td>${badge(t.status)}</td><td>${fmt(t.updated)}</td></tr>`).join('')}
+   </tbody></table></div>`:''}
+  <h4 style="margin:0 0 8px;font-size:13px">Activity (newest first)</h4>
+  <div class="timeline">
+   ${ev.length?ev.map(a=>`<div class="event"><span class="dot"></span><div><b>${a.a}</b><div style="font-size:12px">${a.d}</div><small class="muted">${a.u} · ${fmt(a.t)}</small></div></div>`).join(''):'<div class="empty">No activity yet.</div>'}
+  </div>`;
+ document.getElementById('taskModal').classList.add('open');
+}
 function syncSheet(){localStorage.setItem('showops_sheet_backup',JSON.stringify(data));toast('Prototype backup snapshot saved. Live Google Sheets sync is ready for integration.')}
 function downloadBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-backup.json';a.click();URL.revokeObjectURL(a.href)}
 function updateUserUI(){
