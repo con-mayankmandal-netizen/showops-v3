@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ShowOps v3.0 — Team Operations</title>
+<style>
+:root{
+ --bg:#f6f8fc;--card:#fff;--ink:#172033;--muted:#667085;--line:#e7eaf0;
+ --nav:#091224;--nav2:#0d1730;--blue:#3568ea;--blue2:#e8efff;
+ --green:#13a45a;--green2:#dff7e9;--amber:#e88919;--amber2:#fff0d7;
+ --red:#e43d48;--red2:#ffe2e5;--purple:#6c37dd;--purple2:#eee8ff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar{width:266px;position:fixed;inset:0 auto 0 0;background:linear-gradient(180deg,var(--nav),var(--nav2));color:#fff;padding:18px 14px;z-index:30}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 24px;font-size:24px;font-weight:800;letter-spacing:-.4px}
+.brand .brandMark{width:34px;height:34px;border-radius:10px;background:#7140e5;display:grid;place-items:center;box-shadow:0 7px 18px rgba(108,55,221,.35)}
+.nav{display:grid;gap:5px}
+.nav button{width:100%;border:0;background:transparent;color:#cfd6e6;text-align:left;padding:11px 13px;border-radius:10px;font-size:14px;display:flex;align-items:center;gap:11px}
+.nav button:hover,.nav button.active{background:linear-gradient(90deg,#6c37dd,#5125c6);color:#fff}
+.nav .icon{width:20px;text-align:center;font-size:16px}
+.nav .lock{margin-left:auto;font-size:12px;opacity:.85}
+.navSeparator{height:1px;background:rgba(255,255,255,.1);margin:14px 6px}
+.profileArea{position:absolute;left:14px;right:14px;bottom:18px}
+.afterHours{border:1px solid rgba(160,175,206,.35);background:rgba(14,23,48,.45);padding:13px;border-radius:11px;margin-bottom:46px}
+.afterHours .title{font-size:12px;font-weight:700}.afterHours .state{color:#35d17d;font-size:12px;font-weight:700;margin-top:7px}.afterHours .until{color:#c3ccdd;font-size:11px;margin-top:3px}
+.user{position:absolute;bottom:0;left:2px;right:2px;display:flex;align-items:center;gap:9px}
+.userAvatar{width:36px;height:36px;border-radius:50%;background:#384564;display:grid;place-items:center;font-weight:800}.user strong{font-size:12px;display:block}.user small{color:#aebbd1;font-size:11px}
+.quickRaise{position:absolute;bottom:56px;left:0;right:0;border:0;background:linear-gradient(90deg,#7d45ef,#5727c8);color:#fff;padding:10px 12px;border-radius:9px;font-weight:750;font-size:12px}
+
+.main{margin-left:266px;flex:1;padding:24px 27px 40px;min-width:0}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:18px}
+.topLeft h1{font-size:27px;line-height:1;margin:0;letter-spacing:-.5px}.topLeft p{margin:7px 0 0;font-size:13px;color:var(--muted)}
+.topTools{display:flex;align-items:center;gap:10px}
+.searchBox{width:290px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 13px 10px 39px;outline:none}
+.searchWrap{position:relative}.searchWrap .searchIcon{position:absolute;left:13px;top:9px;color:#98a2b3}
+.toolIcon{width:34px;height:34px;border:0;background:#fff;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:#39425a}
+.profileTop{display:flex;align-items:center;gap:9px;padding-left:4px}.profileTop .avatar{width:36px;height:36px;background:#d7dcef;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#44507a}.profileTop strong{font-size:12px;display:block}.profileTop small{color:var(--muted);font-size:11px}
+.topActions{display:none}
+
+.cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:0 7px 25px rgba(15,23,42,.045);padding:15px}
+.kpi{min-height:109px;position:relative;overflow:hidden}.kpi .kpiIcon{width:37px;height:37px;border-radius:50%;display:grid;place-items:center;font-size:17px;margin-bottom:8px}.kpi .label{font-size:12px;color:#3e485e;font-weight:650}.kpi .num{font-size:27px;font-weight:850;line-height:1;margin-top:4px}.kpi .delta{font-size:10px;margin-top:8px}.up{color:#1b9c5b}.down{color:#ef4444}.kpi.purple .kpiIcon{background:var(--purple2);color:var(--purple)}.kpi.orange .kpiIcon{background:var(--amber2);color:var(--amber)}.kpi.red .kpiIcon{background:var(--red2);color:var(--red)}.kpi.green .kpiIcon{background:var(--green2);color:var(--green)}.kpi.blue .kpiIcon{background:var(--blue2);color:var(--blue)}
+
+.gridDash{display:grid;grid-template-columns:1.45fr .72fr;gap:14px;margin-bottom:14px}
+.gridDashBottom{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-bottom:14px}
+.sectionTitle{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.sectionTitle h2{font-size:16px;margin:0}.sectionLink{font-size:12px;color:#4f2dc1;cursor:pointer}
+.tableWrap{overflow:auto}.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{padding:10px 7px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.table th{color:#667085;font-weight:650;white-space:nowrap}.table tr:last-child td{border-bottom:0}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:750;white-space:nowrap}
+.blue{background:var(--blue2);color:#1d56d3}.green{background:var(--green2);color:#16703f}.amber{background:var(--amber2);color:#a05b04}.red{background:var(--red2);color:#ae2831}.purple{background:var(--purple2);color:#5d2dc5}.gray{background:#eef1f6;color:#536078}
+.attentionList{display:grid}.attentionRow{display:grid;grid-template-columns:25px 1fr auto;gap:8px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}.attentionRow:last-child{border-bottom:0}.attentionIcon{width:21px;height:21px;border-radius:50%;display:grid;place-items:center;font-size:11px}.attentionText strong{font-size:12px}.attentionText small{display:block;color:var(--muted);margin-top:2px}.attentionCount{font-size:12px;font-weight:800;color:#b33b45}
+
+.myTaskTable .taskName{font-weight:700}.dueRed{color:#e34a57;font-weight:700}.dueAmber{color:#bf6c08;font-weight:700}
+.activityList{display:grid}.activityItem{display:grid;grid-template-columns:27px 1fr auto;gap:8px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line)}.activityItem:last-child{border-bottom:0}.activityDot{width:21px;height:21px;border-radius:50%;display:grid;place-items:center;font-size:10px}.activityMain strong{font-size:12px}.activityMain small{display:block;color:var(--muted);margin-top:3px}.activityTime{font-size:10px;color:var(--muted);white-space:nowrap}
+.sub{font-size:13px;color:var(--muted)}
+.page{display:none}.page.active{display:block}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 12px;border-radius:9px;font-weight:650}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.danger{background:var(--red);border-color:var(--red);color:#fff}.btn.small{font-size:11px;padding:7px 9px}
+.filterbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px}.filterbar input,.filterbar select,.field input,.field select,.field textarea{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;color:var(--ink)}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}.field textarea{width:100%;min-height:105px;resize:vertical}.full{grid-column:1/-1}
+.notice{padding:11px 12px;border-radius:10px;background:#fff2d8;color:#925b07;font-size:12px;margin-bottom:13px}.notice.good{background:var(--green2);color:#166534}
+.modal{display:none;position:fixed;inset:0;background:rgba(2,6,23,.52);z-index:100;align-items:center;justify-content:center;padding:20px}.modal.open{display:flex}.modalBox{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}.modalHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.close{border:0;background:#eef1f6;border-radius:50%;width:32px;height:32px}
+.empty{text-align:center;color:var(--muted);padding:28px}.muted{color:var(--muted)}
+.timeline{display:grid;gap:12px}.event{display:grid;grid-template-columns:12px 1fr;gap:10px}.dot{width:9px;height:9px;border-radius:50%;background:var(--blue);margin-top:4px}
+.multiFilter{position:relative}.multiFilterBtn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 10px}.multiMenu{display:none;position:absolute;top:calc(100% + 5px);left:0;z-index:70;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 30px rgba(15,23,42,.13);padding:7px;min-width:210px}.multiMenu.open{display:block}.multiMenu label{display:flex;gap:7px;align-items:center;padding:7px;font-size:12px;border-radius:7px}.multiMenu label:hover{background:#f5f7fb}.multiActions{display:flex;gap:6px;border-top:1px solid var(--line);padding-top:6px;margin-top:4px}.multiActions button{border:1px solid var(--line);background:#fff;padding:5px 7px;border-radius:6px;font-size:11px}
+.statLine{font-size:12px;color:var(--muted);margin-bottom:10px}
+.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;display:none;z-index:200;font-size:12px}
+@media(max-width:1200px){.cards{grid-template-columns:repeat(3,1fr)}.gridDash,.gridDashBottom{grid-template-columns:1fr}}
+@media(max-width:900px){.sidebar{width:78px}.brand .word,.nav .txt,.profileArea .copy,.afterHours,.quickRaise{display:none}.nav button{justify-content:center}.main{margin-left:78px;padding:18px}.searchBox{width:210px}}
+@media(max-width:650px){.cards{grid-template-columns:repeat(2,1fr)}.topbar{flex-direction:column}.topTools{width:100%}.searchBox{width:100%}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+
+<script>
+window.SHOWOPS_CONFIG = {
+  apiUrl: "",        // ← paste your Apps Script web app URL here after deploying Code.gs
+  useBackend: false, // ← set to true once apiUrl is filled in
+  pollMs: 10000
+};
+</script>
+
+<div class="app">
+<aside class="sidebar">
+ <div class="brand"><span class="brandMark">✓</span><span>ShowOps</span></div>
+ <div class="nav" id="nav"></div>
+ <div class="profile"><b>Mayank</b><div class="copy"><small>Manager / Ops POC</small></div></div>
+</aside>
+<main class="main">
+
+<section id="dashboard" class="page active">
+  <div class="topbar">
+    <div class="topLeft">
+      <h1>Dashboard</h1>
+      <p>Welcome back, Mayank 👋</p>
+    </div>
+    <div class="topTools">
+      <div class="searchWrap"><span class="searchIcon">⌕</span><input class="searchBox" id="globalSearch" placeholder="Search shows, tasks, people..."></div>
+      <button class="toolIcon" title="Notifications">♧</button>
+      <button class="toolIcon" title="Help">?</button>
+      <div class="profileTop"><div class="avatar">M</div><div><strong>Mayank</strong><small>Manager</small></div><span>⌄</span></div>
+    </div>
+  </div>
+
+  <div id="kpis" class="cards"></div>
+  <div class="gridDash">
+    <div class="card">
+      <div class="sectionTitle">
+        <h2>Shows Master (Snapshot)</h2>
+        <span class="sectionLink" onclick="openPage('shows')">View All Shows →</span>
+      </div>
+      <div class="tableWrap">
+        <table class="table">
+          <thead><tr><th>Show</th><th>Type</th><th>Status</th><th>Owner</th><th>Open Tasks</th><th>Blockers</th><th>Updated</th></tr></thead>
+          <tbody id="dashShows"></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin-top:12px"><span class="sectionLink" onclick="openPage('shows')">View all shows →</span></div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle"><h2>Needs Attention</h2><span class="badge red" id="attentionTotal">0</span></div>
+      <div id="attention" class="attentionList"></div>
+    </div>
+  </div>
+
+  <div class="gridDashBottom">
+    <div class="card">
+      <div class="sectionTitle"><h2>My Priority Queue</h2><button class="btn small" onclick="openPage('mytasks')">View My Tasks</button></div>
+      <div class="tableWrap">
+        <table class="table myTaskTable">
+          <thead><tr><th>Task</th><th>Show</th><th>Priority</th><th>Due Date</th><th>Status</th></tr></thead>
+          <tbody id="dashMy"></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin-top:12px"><span class="sectionLink" onclick="openPage('mytasks')">Go to My Tasks →</span></div>
+    </div>
+
+    <div class="card">
+      <div class="sectionTitle"><h2>Recent Activity</h2><button class="btn small" onclick="openPage('activity')">View All</button></div>
+      <div id="recent" class="activityList"></div>
+      <div style="text-align:center;margin-top:12px"><span class="sectionLink" onclick="openPage('activity')">View all activity →</span></div>
+    </div>
+  </div>
+</section>
+<section id="shows" class="page">
+ <div class="topbar"><div><h1>Shows Master</h1><div class="sub">One row per show. Current status comes from the latest meaningful task/activity.</div></div><button class="btn primary" onclick="openAddShow()">＋ Add New Show</button></div>
+ <div class="card"><div class="filter"><input id="showSearch" placeholder="Search show..." oninput="renderShows()"><select id="showTypeFilter" onchange="renderShows()"><option>All Types</option><option>UK</option><option>EU</option><option>Other</option></select><div class="multiFilter" id="showStatusMulti">
+  <button type="button" class="multiFilterBtn" onclick="toggleStatusMenu(event)">All Status ▾</button>
+  <div class="multiMenu" id="showStatusMenu">
+    <label><input type="checkbox" value="In Progress" onchange="renderShows()"> In Progress</label>
+    <label><input type="checkbox" value="Completed" onchange="renderShows()"> Completed</label>
+    <label><input type="checkbox" value="Blocked" onchange="renderShows()"> Blocked</label>
+    <label><input type="checkbox" value="Unassigned" onchange="renderShows()"> Unassigned</label>
+    <label><input type="checkbox" value="No Active Task" onchange="renderShows()"> No Active Task</label>
+    <div class="multiActions"><button type="button" onclick="selectAllShowStatuses(event)">Select All</button><button type="button" onclick="clearShowStatuses(event)">Clear All</button></div>
+  </div>
+</div></div>
+ <div class="tableWrap"><table class="table"><thead><tr><th>Show</th><th>Type</th><th>Current Status</th><th>Latest Task / Message</th><th>Owner</th><th>Blocker</th><th>Updated</th><th></th></tr></thead><tbody id="showRows"></tbody></table></div></div>
+</section>
+
+<section id="request" class="page">
+ <div class="topbar"><div><h1>Raise Request</h1><div class="sub">Writers can request work only for approved shows or Adhoc. Request window: 06:00–18:30.</div></div></div>
+ <div id="requestLock"></div>
+ <div class="card" id="requestCard"><div class="formgrid">
+  <div class="field"><label>Show Name *</label><select id="rShow"></select></div>
+  <div class="field"><label>Assign To</label><select id="rAssignee"></select></div>
+  <div class="field full"><label>Task / Requirement *</label><textarea id="rTask" placeholder="Write the task / requirement..."></textarea></div>
+  <div class="field"><label>Priority</label><select id="rHml"><option>High</option><option>Medium</option><option>Low</option></select></div>
+  <div class="field"><label>P0 / P1 / P2</label><select id="rP"><option>P0</option><option>P1</option><option selected>P2</option></select></div>
+  <div class="field"><label>High Priority Flag</label><select id="rHigh"><option>No</option><option>Yes</option></select></div>
+  <div class="field"><label>Deadline</label><input type="date" id="rDeadline"></div>
+  <div class="field full"><label>Additional Details</label><textarea id="rDetails" placeholder="Optional context, links or notes..."></textarea></div>
+ </div><div style="margin-top:15px"><button class="btn primary" onclick="submitRequest()">Submit Request</button></div></div>
+</section>
+
+<section id="tasks" class="page">
+ <div class="topbar"><div><h1>Overall Task Tracker</h1><div class="sub">See everything, assign/reassign work, update status and reopen completed tasks.</div></div></div>
+ <div class="card"><div class="filter"><input id="taskSearch" placeholder="Search task/show..." oninput="renderTasks()"><select id="taskMemberFilter" onchange="renderTasks()"><option>All People</option></select><select id="taskStatusFilter" onchange="renderTasks()"><option>All Status</option><option>Unassigned</option><option>Assigned</option><option>In Progress</option><option>Blocked</option><option>Completed</option><option>Not Completed</option></select><select id="taskPFilter" onchange="renderTasks()"><option>All P Levels</option><option>P0</option><option>P1</option><option>P2</option></select><button class="btn small" onclick="bulkReassign()">Reassign Selected</button></div>
+ <div class="tableWrap"><table class="table"><thead><tr><th>☑</th><th>Show</th><th>Task</th><th>H/M/L</th><th>P</th><th>High</th><th>Assigned To</th><th>Status</th><th>Deadline</th><th>Action</th></tr></thead><tbody id="taskRows"></tbody></table></div></div>
+</section>
+
+<section id="team" class="page">
+ <div class="topbar"><div><h1>Team Workload & Assignment</h1><div class="sub">Select a person to inspect their full queue and reassign individual or multiple tasks.</div></div></div>
+ <div class="cards" id="teamKpis"></div>
+ <div class="card"><div class="filter"><select id="teamPerson" onchange="renderTeam()"><option>All Team</option></select><input id="teamSearch" placeholder="Search their tasks..." oninput="renderTeam()"></div><div id="teamSummary" class="sub" style="margin-bottom:12px"></div><div class="tableWrap"><table class="table"><thead><tr><th>Show</th><th>Task</th><th>H/M/L</th><th>P</th><th>High</th><th>Status</th><th>Deadline</th><th>Reassign</th></tr></thead><tbody id="teamRows"></tbody></table></div></div>
+</section>
+
+<section id="issues" class="page">
+ <div class="topbar"><div><h1>Blocker / Issue Tracker</h1><div class="sub">Issues are linked to shows/tasks and surface automatically in Show Master.</div></div><button class="btn danger" onclick="openIssue()">＋ Raise Issue</button></div>
+ <div id="issueKpis" class="cards"></div>
+ <div class="card"><div class="filter"><select id="issueStatusFilter" onchange="renderIssues()"><option>All</option><option>Open</option><option>Investigating</option><option>Resolved</option><option>Closed</option></select><select id="issueSeverityFilter" onchange="renderIssues()"><option>All</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></div><div class="tableWrap"><table class="table"><thead><tr><th>Show</th><th>Task</th><th>Issue</th><th>Severity</th><th>Status</th><th>Raised By</th><th>Owner</th></tr></thead><tbody id="issueRows"></tbody></table></div></div>
+</section>
+
+<section id="status" class="page">
+ <div class="topbar"><div><h1>Current Show Status</h1><div class="sub">Each show appears once. Latest activity determines its current status.</div></div></div>
+ <div class="card"><div class="tableWrap"><table class="table"><thead><tr><th>Show</th><th>Type</th><th>Status</th><th>Latest Message</th><th>Owner</th><th>Blocker</th><th>Updated</th><th></th></tr></thead><tbody id="statusRows"></tbody></table></div></div>
+</section>
+
+<section id="mytasks" class="page">
+ <div class="topbar"><div><h1>My Tasks</h1><div class="sub">Automatically populated from assignment. Sorted by High flag → P0/P1/P2 → H/M/L → deadline.</div></div></div>
+ <div class="card"><div class="filter"><select id="myFilter" onchange="renderMyTasks()"><option>All</option><option>High Priority</option><option>P0</option><option>P1</option><option>P2</option><option>Due Today</option><option>Overdue</option></select></div><div class="tableWrap"><table class="table"><thead><tr><th>Task</th><th>Show</th><th>H/M/L</th><th>P</th><th>High</th><th>Deadline</th><th>Status</th><th>Action</th></tr></thead><tbody id="myRows"></tbody></table></div></div>
+</section>
+
+<section id="performance" class="page"><div class="notice" style="background:#dcfce7;color:#166534"><b>🔒 Manager Only:</b> Performance data is private and visible only to the Manager/Admin.</div>
+ <div class="topbar"><div><h1>Performance & Throughput</h1><div class="sub">Weekly work logs, completed tasks, blockers, completion rate and workload.</div></div></div>
+ <div id="perfKpis" class="cards"></div>
+ <div class="grid2"><div class="card"><div class="sectionTitle"><h2>Weekly Throughput</h2><span class="muted">Completed tasks</span></div><div id="throughput"></div></div><div class="card"><div class="sectionTitle"><h2>Workload by Person</h2><span class="muted">Open tasks</span></div><div id="perfLoad"></div></div></div>
+ <div class="card"><div class="sectionTitle"><h2>Weekly Log</h2><span class="muted">Prototype sample</span></div><div class="tableWrap"><table class="table"><thead><tr><th>Week</th><th>Assigned</th><th>Completed</th><th>Blocked</th><th>Completion Rate</th><th>Avg TAT</th></tr></thead><tbody id="weekRows"></tbody></table></div></div>
+</section>
+
+<section id="people" class="page">
+ <div class="topbar"><div><h1>People & Access</h1><div class="sub">Manage Managers, Writers, Ops Persons and Viewers. Deactivate rather than delete to preserve history.</div></div><button class="btn primary" onclick="openPerson()">＋ Add Person</button></div>
+ <div class="card"><div class="tableWrap"><table class="table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>After-Hours Access</th><th>Active</th><th>Actions</th></tr></thead><tbody id="peopleRows"></tbody></table></div></div>
+</section>
+
+
+<section id="sheets" class="page">
+  <div class="topbar">
+    <div><h1>Google Sheet View</h1><div class="subtitle">Preview of the permanent backup structure. In production, every event will sync automatically.</div></div>
+    <button class="btn primary" onclick="downloadSheetBackup()">Download Sheet Backup</button>
+  </div>
+  <div class="section">
+    <div class="sheetTabs" id="sheetTabs"></div>
+    <div id="sheetTable" style="margin-top:14px;overflow:auto"></div>
+  </div>
+</section>
+
+<section id="activity" class="page">
+ <div class="topbar"><div><h1>Activity Log</h1><div class="sub">Immutable-style event history for assignment, updates, blockers, completion and reopen actions.</div></div></div>
+ <div class="card"><div class="tableWrap"><table class="table"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Show</th><th>Details</th></tr></thead><tbody id="activityRows"></tbody></table></div></div>
+</section>
+
+<section id="settings" class="page">
+ <div class="topbar"><div><h1>Settings</h1><div class="sub">Control request cut-off and selected after-hours access.</div></div></div>
+ <div class="grid2">
+  <div class="card"><div class="sectionTitle"><h2>Request Window</h2></div><div class="formgrid">
+   <div class="field"><label>Start</label><input type="time" id="setStart" value="06:00"></div><div class="field"><label>End</label><input type="time" id="setEnd" value="18:30"></div>
+   <div class="field full"><label>Who can bypass after-hours lock?</label><div id="afterHoursList"></div></div>
+  </div><button class="btn primary" style="margin-top:14px" onclick="saveSettings()">Save Settings</button></div>
+  <div class="card"><div class="sectionTitle"><h2>Data Protection</h2></div><div class="notice successNotice"><b>Google Sheets backup:</b> recommended as persistent operational backup. This prototype stores a browser snapshot; live Sheets syncing is an integration step.</div><button class="btn" onclick="downloadBackup()">Download JSON Backup</button></div>
+ </div>
+<div class="card" style="margin-top:14px"><div class="sectionTitle"><h2>Delete / Archive Show</h2><span class="badge red">Manager Only</span></div><div class="notice">Archive a show from the active Show Master. Historical requests, tasks and activity remain preserved.</div><div class="field"><label>Select Show</label><select id="deleteShowSelect"></select></div><button class="btn danger" style="margin-top:12px" onclick="deleteSelectedShow()">Delete / Archive Show</button></div></section>
+</main></div>
+
+<!-- MODALS -->
+<div class="modal" id="showModal"><div class="modalBox"><div class="modalHead"><h2 style="margin:0">Add New Show</h2><button class="close" onclick="closeModal('showModal')">×</button></div>
+ <div class="notice">Show Type is mandatory. A show cannot be created without UK, EU or Other.</div>
+ <div class="formgrid"><div class="field"><label>Show Name *</label><input id="newName"></div><div class="field"><label>Show Type *</label><select id="newType"><option value="">Select type</option><option>UK</option><option>EU</option><option>Other</option></select></div><div class="field"><label>Genre</label><input id="newGenre"></div><div class="field"><label>Language</label><input id="newLang"></div></div>
+ <button class="btn primary" style="margin-top:14px" onclick="addShow()">Add Show</button></div></div>
+
+<div class="modal" id="issueModal"><div class="modalBox"><div class="modalHead"><h2 style="margin:0">Raise Blocker / Issue</h2><button class="close" onclick="closeModal('issueModal')">×</button></div>
+ <div class="formgrid"><div class="field"><label>Show *</label><select id="iShow"></select></div><div class="field"><label>Severity</label><select id="iSeverity"><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></div><div class="field full"><label>Issue *</label><textarea id="iText"></textarea></div><div class="field"><label>Related Task</label><select id="iTask"></select></div><div class="field"><label>Owner</label><select id="iOwner"></select></div></div>
+ <button class="btn danger" style="margin-top:14px" onclick="submitIssue()">Raise Issue</button></div></div>
+
+<div class="modal" id="taskModal"><div class="modalBox"><div class="modalHead"><h2 style="margin:0">Update Task</h2><button class="close" onclick="closeModal('taskModal')">×</button></div><div id="taskModalBody"></div></div></div>
+
+<div class="modal" id="personModal"><div class="modalBox"><div class="modalHead"><h2 style="margin:0">Add Person</h2><button class="close" onclick="closeModal('personModal')">×</button></div>
+ <div class="formgrid"><div class="field"><label>Name *</label><input id="pName"></div><div class="field"><label>Email *</label><input id="pEmail"></div><div class="field"><label>Role *</label><select id="pRole"><option>Manager</option><option>Writer</option><option>Ops Person</option><option>Viewer</option></select></div><div class="field"><label>After-Hours Access</label><select id="pAfter"><option>No</option><option>Yes</option></select></div></div><button class="btn primary" style="margin-top:14px" onclick="addPerson()">Add Person</button></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const NAV=[
+ ['dashboard','⌂','Dashboard'],['shows','▣','Shows Master'],['request','＋','Raise Request'],
+ ['tasks','☷','Overall Task Tracker'],['team','◉','Individual Workload'],['issues','⚠','Blockers / Issues'],
+ ['status','◌','Show Status & Timeline'],['mytasks','✓','My Tasks'],
+ ['sep','',''],['performance','↗','Performance','lock'],['people','♟','People & Access','lock'],
+ ['activity','☷','Activity Log'],['settings','⚙','Settings','lock']
+];
+const seed={
+ shows:[
+  {id:'S1',name:'Show A',type:'UK',genre:'Romance',language:'English',active:true},
+  {id:'S2',name:'Show B',type:'EU',genre:'Drama',language:'English',active:true},
+  {id:'S3',name:'Show C',type:'Other',genre:'Thriller',language:'Hindi',active:true},
+  {id:'S4',name:'Show D',type:'UK',genre:'Comedy',language:'English',active:true},
+  {id:'S5',name:'Show E',type:'EU',genre:'Mystery',language:'Hindi',active:true}
+ ],
+ people:[
+  {id:'U1',name:'Mayank',email:'mayank@example.com',role:'Manager',after:true,active:true},
+  {id:'U2',name:'Riya',email:'riya@example.com',role:'Writer',after:false,active:true},
+  {id:'U3',name:'Rahul',email:'rahul@example.com',role:'Ops Person',after:true,active:true},
+  {id:'U4',name:'Priya',email:'priya@example.com',role:'Ops Person',after:false,active:true},
+  {id:'U5',name:'Amit',email:'amit@example.com',role:'Viewer',after:false,active:true}
+ ],
+ tasks:[
+  {id:'T1',showId:'S1',task:'German Translation Ep 50–70',hm:'High',p:'P0',high:true,assignee:'Mayank',status:'In Progress',deadline:'2026-08-15',created:'2026-08-15T10:20:00',updated:'2026-08-15T18:20:00',requester:'Riya',message:'Translation in progress for Ep 50–70'},
+  {id:'T2',showId:'S2',task:'QC Check Ep 10–20',hm:'High',p:'P1',high:true,assignee:'Rahul',status:'Completed',deadline:'2026-08-16',created:'2026-08-15T10:00:00',updated:'2026-08-15T16:10:00',requester:'Riya',message:'QC completed for Ep 10–20'},
+  {id:'T3',showId:'S3',task:'Thumbnail Pack',hm:'Medium',p:'P1',high:true,assignee:'Priya',status:'Not Completed',deadline:'2026-08-15',created:'2026-08-15T09:30:00',updated:'2026-08-15T17:40:00',requester:'Riya',message:'Not completed — missing assets'},
+  {id:'T4',showId:'S4',task:'Subtitle Sync Ep 20–40',hm:'Medium',p:'P2',high:false,assignee:'',status:'Unassigned',deadline:'2026-08-18',created:'2026-08-15T13:10:00',updated:'2026-08-15T13:10:00',requester:'Riya',message:'New subtitle request raised'},
+  {id:'T5',showId:'S5',task:'Script Update',hm:'Low',p:'P2',high:false,assignee:'Amit',status:'Completed',deadline:'2026-08-14',created:'2026-08-14T10:00:00',updated:'2026-08-14T16:30:00',requester:'Riya',message:'Script update completed'},
+  {id:'T6',showId:'S1',task:'Previous QC review',hm:'Medium',p:'P1',high:false,assignee:'Mayank',status:'Completed',deadline:'2026-08-13',created:'2026-08-13T09:00:00',updated:'2026-08-13T14:00:00',requester:'Riya',message:'QC completed'}
+ ],
+ issues:[
+  {id:'I1',showId:'S3',taskId:'T3',issue:'Missing source assets',severity:'Critical',status:'Open',raisedBy:'Priya',owner:'Rahul',created:'2026-08-15T15:20:00'},
+  {id:'I2',showId:'S2',taskId:'T2',issue:'Script file unavailable',severity:'High',status:'Investigating',raisedBy:'Rahul',owner:'Amit',created:'2026-08-15T11:20:00'}
+ ],
+ activity:[
+  {t:'2026-08-15T18:20:00',u:'Mayank',a:'Task Updated',show:'Show A',d:'Translation in progress for Ep 50–70'},
+  {t:'2026-08-15T17:40:00',u:'Priya',a:'Task Marked Not Completed',show:'Show C',d:'Not completed — missing assets'},
+  {t:'2026-08-15T16:10:00',u:'Rahul',a:'Task Completed',show:'Show B',d:'QC completed for Ep 10–20'},
+  {t:'2026-08-15T13:10:00',u:'Riya',a:'Request Raised',show:'Show D',d:'New subtitle request raised'}
+ ],
+ settings:{start:'06:00',end:'18:30',override:['Mayank','Rahul']}
+};
+let data=JSON.parse(localStorage.getItem('showops_v2')||'null')||seed;
+const CURRENT_USER='Mayank';
+
+function save(){localStorage.setItem('showops_v2',JSON.stringify(data))}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(window.__to);window.__to=setTimeout(()=>t.style.display='none',2200)}
+function openPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===id));renderAll()}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function showById(id){return data.shows.find(s=>s.id===id)}
+function taskById(id){return data.tasks.find(t=>t.id===id)}
+function fmt(d){return new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+function day(d){return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+function badge(v){
+ let c='gray';
+ if(['P0','Critical','Blocked','Not Completed','Open'].includes(v))c='red';
+ else if(['P1','High','In Progress','Investigating'].includes(v))c='amber';
+ else if(['Completed','Resolved','Closed'].includes(v))c='green';
+ else if(['P2','Medium'].includes(v))c='blue';
+ return `<span class="badge ${c}">${v}</span>`
+}
+function prioritySort(a,b){
+ const h={High:3,Medium:2,Low:1},p={P0:3,P1:2,P2:1};
+ const ac=a.status==='Completed'?1:0,bc=b.status==='Completed'?1:0;
+ return (ac-bc)||(Number(b.high)-Number(a.high))||(p[b.p]-p[a.p])||(h[b.hm]-h[a.hm])||(new Date(a.deadline)-new Date(b.deadline));
+}
+function latestTask(showId){return data.tasks.filter(t=>t.showId===showId).sort((a,b)=>new Date(b.updated)-new Date(a.updated))[0]}
+function openIssueForShow(showId){return data.issues.filter(i=>i.showId===showId&&['Open','Investigating'].includes(i.status)).sort((a,b)=>new Date(b.created)-new Date(a.created))[0]}
+function showStatus(showId){
+ const t=latestTask(showId), i=openIssueForShow(showId);
+ if(i)return 'Blocked'; if(!t)return 'No Active Task'; if(t.status==='Completed')return 'Completed'; if(t.status==='Not Completed')return 'In Progress'; if(t.status==='Unassigned')return 'Unassigned'; return t.status;
+}
+function log(action,show,details,user=CURRENT_USER){data.activity.unshift({t:new Date().toISOString(),u:user,a:action,show,d:details});save()}
+function apiWrite(payload){if(!window.SHOWOPS_CONFIG.useBackend||!window.SHOWOPS_CONFIG.apiUrl)return;window.showOpsApi.action(payload).catch(e=>console.warn('ShowOps API write failed:',e))}
+function renderRequests(){const rs=document.getElementById('rShow');if(!rs)return;rs.innerHTML='<option value="adhoc">Adhoc</option>'+data.shows.filter(s=>s.active).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');const ra=document.getElementById('rAssignee');if(ra)ra.innerHTML='<option value="">Unassigned</option>'+teamNames().map(n=>`<option>${n}</option>`).join('')}
+function initNav(){
+ const n=document.getElementById('nav');
+ n.innerHTML=NAV.map(x=>{
+   if(x[0]==='sep') return '<div class="navSeparator"></div>';
+   const lock=x[3]==='lock'?'<span class="lock">🔒</span>':'';
+   return `<button data-nav="${x[0]}" onclick="openPage('${x[0]}')"><span class="icon">${x[1]}</span><span class="txt">${x[2]}</span>${lock}</button>`;
+ }).join('');
+ document.querySelector('[data-nav="dashboard"]').classList.add('active');
+}
+function renderAll(){renderDashboard();renderShows();renderRequests();renderTasks();renderTeam();renderIssues();renderStatus();renderMyTasks();renderPerformance();renderPeople();renderActivity();renderSettings();renderDeleteShow();checkRequestLock()}
+function renderDashboard(){
+ const open=data.tasks.filter(t=>t.status!=='Completed').length;
+ const un=data.tasks.filter(t=>!t.assignee).length;
+ const comp=data.tasks.filter(t=>t.status==='Completed').length;
+ const block=data.issues.filter(i=>['Open','Investigating'].includes(i.status)).length;
+ const high=data.tasks.filter(t=>t.high&&t.status!=='Completed').length;
+ const overdue=data.tasks.filter(t=>new Date(t.deadline)<new Date('2026-08-15')&&t.status!=='Completed').length;
+
+ const kpis=[
+   ['Total Tasks',data.tasks.length,'purple','▣','+12','up'],
+   ['Open Tasks',open,'orange','⌛','+8','down'],
+   ['Open Blockers',block,'red','!','+3','down'],
+   ['Completed Tasks',comp,'green','✓','+11','up'],
+   ['High Priority',high,'blue','⚑','+4','down'],
+   ['Unassigned',un,'purple','♙','+2','down']
+ ];
+ document.getElementById('kpis').innerHTML=kpis.map(x=>`
+   <div class="card kpi ${x[2]}">
+     <div class="kpiIcon">${x[3]}</div>
+     <div class="label">${x[0]}</div>
+     <div class="num">${x[1]}</div>
+     <div class="delta ${x[5]}">${x[5]==='up'?'↗':'↗'} ${x[4]} vs yesterday</div>
+   </div>`).join('');
+
+ const activeShows=data.shows.filter(s=>s.active).sort((a,b)=>{
+   const ac=showStatus(a.id)==='Completed'?1:0,bc=showStatus(b.id)==='Completed'?1:0;
+   return ac-bc;
+ }).slice(0,5);
+
+ document.getElementById('dashShows').innerHTML=activeShows.map(s=>{
+   const t=latestTask(s.id), i=openIssueForShow(s.id);
+   const openTasks=data.tasks.filter(x=>x.showId===s.id&&x.status!=='Completed').length;
+   const blockers=data.issues.filter(x=>x.showId===s.id&&['Open','Investigating'].includes(x.status)).length;
+   return `<tr>
+     <td><b>${s.name}</b></td>
+     <td>${badge(s.type)}</td>
+     <td>${badge(showStatus(s.id))}</td>
+     <td>${t?.assignee||'—'}</td>
+     <td>${openTasks}</td>
+     <td>${blockers?`<span class="badge red">${blockers}</span>`:'<span class="badge green">0</span>'}</td>
+     <td>${t?fmt(t.updated):'—'}</td>
+   </tr>`;
+ }).join('') || '<tr><td colspan="7" class="empty">No active shows.</td></tr>';
+
+ const needs=[
+   [overdue,'Overdue Tasks','Tasks past deadline','⏱','red'],
+   [high,'High Priority Tasks','Requires attention','⚑','red'],
+   [block,'Open Blockers','Needs resolution','⚠','red'],
+   [data.tasks.filter(t=>t.deadline==='2026-08-15'&&t.status!=='Completed').length,'Tasks Due Today','Due today','▣','amber'],
+   [un,'Unassigned Tasks','Needs an owner','♙','purple']
+ ];
+ const totalNeeds=needs.filter(x=>x[0]>0).length;
+ document.getElementById('attentionTotal').textContent=totalNeeds;
+ document.getElementById('attention').innerHTML=needs.map(x=>`
+   <div class="attentionRow">
+     <span class="attentionIcon ${x[4]}">${x[3]}</span>
+     <div class="attentionText"><strong>${x[1]}</strong><small>${x[2]}</small></div>
+     <div class="attentionCount">${x[0]}</div>
+   </div>`).join('');
+
+ const mine=data.tasks.filter(t=>t.assignee===CURRENT_USER).sort(prioritySort).slice(0,6);
+ document.getElementById('dashMy').innerHTML=mine.map(t=>{
+   const dueClass=t.deadline==='2026-08-15'?'dueRed':(t.deadline==='2026-08-16'?'dueAmber':'');
+   return `<tr><td class="taskName">${t.task}</td><td>${showById(t.showId)?.name||'Adhoc'}</td><td>${badge(t.p)}</td><td class="${dueClass}">${day(t.deadline)}</td><td>${badge(t.status)}</td></tr>`;
+ }).join('') || '<tr><td colspan="5" class="empty">No tasks assigned.</td></tr>';
+
+ document.getElementById('recent').innerHTML=data.activity.slice(0,6).map((a,i)=>`
+   <div class="activityItem">
+     <span class="activityDot ${i%3===0?'green':(i%3===1?'blue':'red')}">${i%3===0?'✓':(i%3===1?'＋':'⚠')}</span>
+     <div class="activityMain"><strong>${a.u} ${a.a.toLowerCase()}</strong><div>${a.d}</div><small>${a.show}</small></div>
+     <div class="activityTime">${relativeTime(a.t)}</div>
+   </div>`).join('') || '<div class="empty">No recent activity.</div>';
+}
+function relativeTime(x){
+ const mins=Math.max(1,Math.round((Date.now()-new Date(x).getTime())/60000));
+ if(mins<60)return mins+' min ago';
+ const hrs=Math.round(mins/60);
+ if(hrs<24)return hrs+' hr ago';
+ return Math.round(hrs/24)+' d ago';
+}
+function renderShows(){
+ const q=(document.getElementById('showSearch')?.value||'').toLowerCase(),tf=document.getElementById('showTypeFilter')?.value||'All Types';
+ const statuses=getSelectedShowStatuses();
+ const rows=data.shows.filter(s=>s.active&&s.name.toLowerCase().includes(q)&&(tf==='All Types'||s.type===tf)).map(s=>{
+  const st=showStatus(s.id);
+  if(statuses.length&&!statuses.includes(st))return '';
+  const t=latestTask(s.id),i=openIssueForShow(s.id);
+  return `<tr><td><b>${s.name}</b><div class="muted">${s.genre} · ${s.language}</div></td><td>${badge(s.type)}</td><td>${badge(st)}</td><td>${t?.message||'No request raised yet'}</td><td>${t?.assignee||'—'}</td><td>${i?badge(i.severity)+' '+i.issue:'—'}</td><td>${t?fmt(t.updated):'—'}</td><td><button class="btn small" onclick="timeline('${s.id}')">Timeline</button></td></tr>`;
+ }).join('');
+ document.getElementById('showRows').innerHTML=rows||'<tr><td colspan="8" class="empty">No shows found.</td></tr>';
+ updateShowStatusButton();
+}
+function isAfterHours(){const now=new Date();const hm=now.getHours()*60+now.getMinutes();const [sh,sm]=data.settings.start.split(':').map(Number),[eh,em]=data.settings.end.split(':').map(Number);return hm<(sh*60+sm)||hm>=(eh*60+em)}
+function canAfterHours(){const p=data.people.find(x=>x.name===CURRENT_USER);return p&&(p.role==='Manager'||p.after||data.settings.override.includes(CURRENT_USER))}
+function checkRequestLock(){
+ const locked=isAfterHours()&&!canAfterHours();
+ const el=document.getElementById('requestLock');const card=document.getElementById('requestCard');
+ el.innerHTML=locked?`<div class="notice"><b>🔒 Request submission is closed.</b> Requests are available from ${data.settings.start} to ${data.settings.end}. You have no after-hours access.</div>`:`<div class="notice successNotice"><b>✓ Request access enabled.</b> ${isAfterHours()?'You have after-hours override access.':'Request window is open.'}</div>`;
+ card.style.opacity=locked?.45:1;card.style.pointerEvents=locked?'none':'auto';
+}
+function submitRequest(){
+ if(isAfterHours()&&!canAfterHours()){toast('Request submission is locked after-hours');return}
+ const task=document.getElementById('rTask').value.trim();if(!task){toast('Task / requirement is required');return}
+ let showId=document.getElementById('rShow').value;if(showId==='adhoc'){if(!data.shows.some(s=>s.id==='S_ADHOC'))data.shows.push({id:'S_ADHOC',name:'Adhoc',type:'Other',genre:'—',language:'—',active:true});showId='S_ADHOC'}
+ const now=new Date().toISOString(),assignee=document.getElementById('rAssignee').value;
+ const t={id:'T'+Date.now(),showId,task,hm:document.getElementById('rHml').value,p:document.getElementById('rP').value,high:document.getElementById('rHigh').value==='Yes',assignee,status:assignee?'Assigned':'Unassigned',deadline:document.getElementById('rDeadline').value||'2026-08-16',created:now,updated:now,requester:CURRENT_USER,message:task};
+ data.tasks.unshift(t);log('Request Raised',showById(showId)?.name||'Adhoc',task);if(assignee)log('Task Assigned',showById(showId)?.name||'Adhoc','Assigned to '+assignee);save();renderAll();toast('Request created and assignment synced');openPage('tasks');
+ apiWrite({action:'addTask',...t,showName:showById(showId)?.name||'Adhoc',user:CURRENT_USER});
+}
+function renderTasks(){
+ const q=(document.getElementById('taskSearch')?.value||'').toLowerCase(),mf=document.getElementById('taskMemberFilter')?.value||'All People',sf=document.getElementById('taskStatusFilter')?.value||'All Status',pf=document.getElementById('taskPFilter')?.value||'All P Levels';
+ document.getElementById('taskMemberFilter').innerHTML='<option>All People</option>'+['Unassigned',...teamNames()].map(x=>`<option>${x}</option>`).join('');document.getElementById('taskMemberFilter').value=mf;
+ const ts=data.tasks.filter(t=>(t.task+' '+(showById(t.showId)?.name||'Adhoc')).toLowerCase().includes(q)&&(mf==='All People'||(t.assignee||'Unassigned')===mf)&&(sf==='All Status'||t.status===sf)&&(pf==='All P Levels'||t.p===pf));
+ document.getElementById('taskRows').innerHTML=ts.map(t=>`<tr><td><input type="checkbox" class="selTask" value="${t.id}"></td><td>${showById(t.showId)?.name||'Adhoc'}</td><td><b>${t.task}</b><div class="muted">${t.requester}</div></td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td><td>${t.high?'🔥 Yes':'—'}</td><td><select onchange="assign('${t.id}',this.value)"><option value="">Unassigned</option>${teamNames().map(n=>`<option ${t.assignee===n?'selected':''}>${n}</option>`).join('')}</select></td><td>${badge(t.status)}</td><td>${day(t.deadline)}</td><td><button class="btn small" onclick="updateTask('${t.id}')">${t.status==='Completed'?'Reopen':'Update'}</button></td></tr>`).join('')||'<tr><td colspan="10" class="empty">No tasks found.</td></tr>';
+}
+function teamNames(){return data.people.filter(p=>p.active&&['Manager','Ops Person','Writer'].includes(p.role)).map(p=>p.name)}
+function assign(id,name){const t=taskById(id);t.assignee=name;t.status=name?(t.status==='Unassigned'?'Assigned':t.status):'Unassigned';t.updated=new Date().toISOString();log('Task Assigned',showById(t.showId)?.name||'Adhoc',name||'Unassigned');save();renderAll();toast(name?'Task assigned to '+name:'Task unassigned');apiWrite({action:'assignTask',id,assignee:name,status:t.status,updated:t.updated,showName:showById(t.showId)?.name||'Adhoc',user:CURRENT_USER})}
+function bulkReassign(){const ids=[...document.querySelectorAll('.selTask:checked')].map(x=>x.value);if(!ids.length){toast('Select at least one task');return}const who=prompt('Assign selected tasks to:\\n'+teamNames().join(', '));if(!who||!teamNames().includes(who)){toast('Valid team member required');return}ids.forEach(id=>assignSilent(id,who));log('Bulk Reassign','Multiple Tasks',ids.length+' task(s) reassigned to '+who);save();renderAll();toast(ids.length+' task(s) reassigned')}
+function assignSilent(id,name){const t=taskById(id);t.assignee=name;t.status=t.status==='Unassigned'?'Assigned':t.status;t.updated=new Date().toISOString()}
+function updateTask(id){const t=taskById(id);document.getElementById('taskModalBody').innerHTML=`<div class="formgrid"><div class="field full"><label>${showById(t.showId)?.name||'Adhoc'} — ${t.task}</label></div><div class="field"><label>Status</label><select id="uStatus">${['Not Started','Assigned','In Progress','Blocked','Completed','Not Completed'].map(x=>`<option ${t.status===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Message</label><input id="uMsg" value="${String(t.message).replaceAll('"','&quot;')}"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveTask('${id}')">${t.status==='Completed'?'Reopen / Save':'Save Update'}</button>`;document.getElementById('taskModal').classList.add('open')}
+function saveTask(id){const t=taskById(id),st=document.getElementById('uStatus').value,msg=document.getElementById('uMsg').value.trim()||st;const logAction=st==='Completed'?'Task Completed':st==='Not Completed'?'Task Marked Not Completed':'Task Updated';t.status=st;t.message=msg;t.updated=new Date().toISOString();log(logAction,showById(t.showId)?.name||'Adhoc',msg);save();closeModal('taskModal');renderAll();toast('Task updated');apiWrite({action:'updateTask',id,status:st,message:msg,updated:t.updated,assignee:t.assignee,showName:showById(t.showId)?.name||'Adhoc',logAction,user:CURRENT_USER})}
+function renderTeam(){
+ const selected=document.getElementById('teamPerson')?.value||'All Team';document.getElementById('teamPerson').innerHTML='<option>All Team</option>'+teamNames().map(n=>`<option>${n}</option>`).join('');document.getElementById('teamPerson').value=selected;
+ const q=(document.getElementById('teamSearch')?.value||'').toLowerCase();const ts=data.tasks.filter(t=>(selected==='All Team'||t.assignee===selected)&&(t.task+' '+(showById(t.showId)?.name||'')).toLowerCase().includes(q));const active=ts.filter(t=>t.status!=='Completed').length;
+ document.getElementById('teamKpis').innerHTML=(selected==='All Team'?[['People',teamNames().length],['Open Tasks',data.tasks.filter(t=>t.assignee&&t.status!=='Completed').length],['Unassigned',data.tasks.filter(t=>!t.assignee).length],['High Priority',data.tasks.filter(t=>t.high&&t.status!=='Completed').length],['Blocked',data.tasks.filter(t=>t.status==='Blocked').length],['Completed',data.tasks.filter(t=>t.status==='Completed').length]]:[['Person',selected],['Open Tasks',active],['Completed',ts.filter(t=>t.status==='Completed').length],['High Priority',ts.filter(t=>t.high).length],['P0',ts.filter(t=>t.p==='P0').length],['Overdue',ts.filter(t=>new Date(t.deadline)<new Date('2026-08-15')&&t.status!=='Completed').length]]).map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('');
+ document.getElementById('teamSummary').textContent=selected==='All Team'?'Select a team member to focus the queue, then reassign individual or multiple tasks.':`${selected} currently has ${ts.length} task(s) in this queue.`;
+ document.getElementById('teamRows').innerHTML=ts.sort(prioritySort).map(t=>`<tr><td>${showById(t.showId)?.name||'Adhoc'}</td><td><b>${t.task}</b></td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td><td>${t.high?'🔥 Yes':'—'}</td><td>${badge(t.status)}</td><td>${day(t.deadline)}</td><td><button class="btn small" onclick="reassignOne('${t.id}')">Reassign</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">No tasks.</td></tr>';
+}
+function reassignOne(id){const t=taskById(id),who=prompt('Assign to:\\n'+teamNames().join(', '));if(!who||!teamNames().includes(who))return;assign(id,who)}
+function renderIssues(){
+ const sf=document.getElementById('issueStatusFilter')?.value||'All',sv=document.getElementById('issueSeverityFilter')?.value||'All';
+ document.getElementById('issueKpis').innerHTML=[['Open',data.issues.filter(i=>i.status==='Open').length],['Investigating',data.issues.filter(i=>i.status==='Investigating').length],['Resolved',data.issues.filter(i=>i.status==='Resolved').length],['Critical',data.issues.filter(i=>i.severity==='Critical').length]].map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('');
+ document.getElementById('issueRows').innerHTML=data.issues.filter(i=>(sf==='All'||i.status===sf)&&(sv==='All'||i.severity===sv)).map(i=>`<tr><td>${showById(i.showId)?.name||'Adhoc'}</td><td>${taskById(i.taskId)?.task||'—'}</td><td>${i.issue}</td><td>${badge(i.severity)}</td><td>${badge(i.status)}</td><td>${i.raisedBy}</td><td>${i.owner||'—'}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">No issues.</td></tr>';
+}
+function openIssue(){document.getElementById('iShow').innerHTML=data.shows.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');document.getElementById('iTask').innerHTML=data.tasks.map(t=>`<option value="${t.id}">${showById(t.showId)?.name||'Adhoc'} — ${t.task}</option>`).join('');document.getElementById('iOwner').innerHTML='<option>Unassigned</option>'+teamNames().map(n=>`<option>${n}</option>`).join('');document.getElementById('issueModal').classList.add('open')}
+function submitIssue(){const showId=document.getElementById('iShow').value,issue=document.getElementById('iText').value.trim();if(!issue){toast('Issue description required');return}const id='I'+Date.now(),now=new Date().toISOString(),taskId=document.getElementById('iTask').value,severity=document.getElementById('iSeverity').value,owner=document.getElementById('iOwner').value;data.issues.unshift({id,showId,taskId,issue,severity,status:'Open',raisedBy:CURRENT_USER,owner,created:now});log('Issue Raised',showById(showId)?.name||'Adhoc',issue);save();closeModal('issueModal');renderAll();toast('Issue raised');apiWrite({action:'addIssue',id,showId,taskId,issue,severity,status:'Open',raisedBy:CURRENT_USER,owner,created:now,showName:showById(showId)?.name||'Adhoc'})}
+function renderStatus(){
+ const rows=data.shows.filter(s=>s.active).map(s=>{const t=latestTask(s.id),i=openIssueForShow(s.id),st=showStatus(s.id);return {s,t,i,st};})
+ .sort((a,b)=>{const ac=a.st==='Completed'?1:0,bc=b.st==='Completed'?1:0;return (ac-bc)||(new Date(b.t?.updated||0)-new Date(a.t?.updated||0));});
+ document.getElementById('statusRows').innerHTML=rows.map(({s,t,i,st})=>`<tr style="${st==='Completed'?'opacity:.65':''}"><td><b>${s.name}</b></td><td>${badge(s.type)}</td><td>${badge(st)}</td><td>${t?.message||'No request raised yet'}</td><td>${t?.assignee||'—'}</td><td>${i?i.issue:'—'}</td><td>${t?fmt(t.updated):'—'}</td><td><button class="btn small" onclick="timeline('${s.id}')">View Timeline</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">No active shows.</td></tr>';
+}
+function renderMyTasks(){
+ let f=document.getElementById('myFilter')?.value||'All',ts=data.tasks.filter(t=>t.assignee===CURRENT_USER);
+ if(f==='High Priority')ts=ts.filter(t=>t.high);
+ if(['P0','P1','P2'].includes(f))ts=ts.filter(t=>t.p===f);
+ if(f==='Due Today')ts=ts.filter(t=>t.deadline==='2026-08-15');
+ if(f==='Overdue')ts=ts.filter(t=>new Date(t.deadline)<new Date('2026-08-15')&&t.status!=='Completed');
+ ts.sort(prioritySort);
+ const activeCount=ts.filter(t=>t.status!=='Completed').length,completedCount=ts.filter(t=>t.status==='Completed').length;
+ let stat=document.querySelector('#mytasks .myTaskStat');
+ if(!stat){
+   stat=document.createElement('div');stat.className='statLine myTaskStat';
+   const table=document.querySelector('#mytasks .tableWrap');
+   if(table)table.parentNode.insertBefore(stat,table);
+ }
+ stat.innerHTML=`<b>${activeCount}</b> active task(s) · <b>${completedCount}</b> completed task(s) at bottom`;
+ document.getElementById('myRows').innerHTML=ts.map(t=>`<tr style="${t.status==='Completed'?'opacity:.62':''}">
+ <td><b>${t.task}</b></td><td>${showById(t.showId)?.name||'Adhoc'}</td><td>${badge(t.hm)}</td><td>${badge(t.p)}</td>
+ <td>${t.high?'🔥 Yes':'—'}</td><td>${day(t.deadline)}</td><td>${badge(t.status)}</td>
+ <td><button class="btn small" onclick="updateTask('${t.id}')">${t.status==='Completed'?'Reopen':'Update'}</button></td>
+ </tr>`).join('')||'<tr><td colspan="8" class="empty">No tasks.</td></tr>';
+}
+function renderWorkload(id){const counts=Object.fromEntries(teamNames().map(n=>[n,data.tasks.filter(t=>t.assignee===n&&t.status!=='Completed').length]));counts['Unassigned']=data.tasks.filter(t=>!t.assignee).length;const max=Math.max(...Object.values(counts),1);document.getElementById(id).innerHTML=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`<div class="barRow"><div class="barTop"><span>${n}</span><b>${c}</b></div><div class="bar"><i style="width:${Math.max(4,c/max*100)}%"></i></div></div>`).join('')}
+function renderPerformance(){const c=data.tasks.filter(t=>t.status==='Completed').length;document.getElementById('perfKpis').innerHTML=[['Tasks Completed',c],['Open Tasks',data.tasks.length-c],['Completion Rate',Math.round(c/data.tasks.length*100)+'%'],['Open Blockers',data.issues.filter(i=>['Open','Investigating'].includes(i.status)).length],['High Priority Open',data.tasks.filter(t=>t.high&&t.status!=='Completed').length],['Unassigned',data.tasks.filter(t=>!t.assignee).length]].map(x=>`<div class="card kpi"><div class="label">${x[0]}</div><div class="num">${x[1]}</div></div>`).join('');const vals=teamNames().map(n=>[n,data.tasks.filter(t=>t.assignee===n&&t.status==='Completed').length]);const mx=Math.max(...vals.map(x=>x[1]),1);document.getElementById('throughput').innerHTML=vals.map(x=>`<div class="barRow"><div class="barTop"><span>${x[0]}</span><b>${x[1]}</b></div><div class="bar"><i style="width:${Math.max(5,x[1]/mx*100)}%"></i></div></div>`).join('');renderWorkload('perfLoad');document.getElementById('weekRows').innerHTML=[['Aug 10–16',data.tasks.length,c,data.issues.filter(i=>i.status!=='Resolved').length,Math.round(c/data.tasks.length*100)+'%','1.7 days'],['Aug 3–9',42,38,4,'90%','1.6 days'],['Jul 27–Aug 2',36,33,3,'92%','1.5 days']].map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}
+function renderPeople(){document.getElementById('peopleRows').innerHTML=data.people.map(p=>`<tr><td><b>${p.name}</b></td><td>${p.email}</td><td>${badge(p.role)}</td><td>${p.after?'✅':'—'}</td><td>${p.active?badge('Active'):badge('Inactive')}</td><td><button class="btn small" onclick="togglePerson('${p.id}')">${p.active?'Deactivate':'Activate'}</button></td></tr>`).join('')}
+function renderActivity(){document.getElementById('activityRows').innerHTML=data.activity.map(a=>`<tr><td>${fmt(a.t)}</td><td>${a.u}</td><td>${a.a}</td><td>${a.show}</td><td>${a.d}</td></tr>`).join('')}
+function renderDeleteShow(){const el=document.getElementById('deleteShowSelect');if(!el)return;el.innerHTML='<option value="">Select show...</option>'+data.shows.filter(s=>s.active).map(s=>`<option value="${s.id}">${s.name} — ${s.type}</option>`).join('');}
+function deleteSelectedShow(){const id=document.getElementById('deleteShowSelect')?.value;if(!id){toast('Select a show first');return}const s=showById(id);if(!s)return;const typed=prompt(`Type "${s.name}" to confirm archiving this show.`);if(typed!==s.name){toast('Delete cancelled');return}s.active=false;log('Show Archived',s.name,'Removed from active Show Master by Manager');save();renderAll();toast('Show archived');apiWrite({action:'archiveShow',id,name:s.name,user:CURRENT_USER})}
+function renderSettings(){document.getElementById('setStart').value=data.settings.start;document.getElementById('setEnd').value=data.settings.end;document.getElementById('afterHoursList').innerHTML=data.people.filter(p=>p.active).map(p=>`<label class="toggle"><input type="checkbox" ${data.settings.override.includes(p.name)?'checked':''} data-ah="${p.name}"> ${p.name} <span class="muted">(${p.role})</span></label>`).join('')}
+function saveSettings(){data.settings.start=document.getElementById('setStart').value;data.settings.end=document.getElementById('setEnd').value;data.settings.override=[...document.querySelectorAll('[data-ah]:checked')].map(x=>x.dataset.ah);save();renderAll();toast('Settings saved');apiWrite({action:'saveSettings',start:data.settings.start,end:data.settings.end,override:data.settings.override})}
+function openAddShow(){document.getElementById('showModal').classList.add('open')}
+function addShow(){const name=document.getElementById('newName').value.trim(),type=document.getElementById('newType').value;if(!name){toast('Show name is required');return}if(!type){toast('Show Type is mandatory — select UK, EU or Other');return}if(data.shows.some(s=>s.name.toLowerCase()===name.toLowerCase())){toast('Show already exists');return}const id='S'+Date.now(),genre=document.getElementById('newGenre').value||'—',language=document.getElementById('newLang').value||'—';data.shows.push({id,name,type,genre,language,active:true});log('Show Added',name,'Type: '+type);save();closeModal('showModal');renderAll();toast('Show added');apiWrite({action:'addShow',id,name,type,genre,language,user:CURRENT_USER})}
+function openPerson(){document.getElementById('personModal').classList.add('open')}
+function addPerson(){const name=document.getElementById('pName').value.trim(),email=document.getElementById('pEmail').value.trim(),role=document.getElementById('pRole').value;if(!name||!email){toast('Name and email are required');return}const id='U'+Date.now(),after=document.getElementById('pAfter').value==='Yes';data.people.push({id,name,email,role,after,active:true});log('Person Added',name,role);save();closeModal('personModal');renderAll();toast('Person added');apiWrite({action:'addPerson',id,name,email,role,after,user:CURRENT_USER})}
+function togglePerson(id){const p=data.people.find(x=>x.id===id);p.active=!p.active;log(p.active?'Person Activated':'Person Deactivated',p.name,p.role);save();renderAll();toast(p.active?'Person activated':'Person deactivated');apiWrite({action:'togglePerson',id,name:p.name,role:p.role,active:p.active,user:CURRENT_USER})}
+function timeline(showId){const s=showById(showId),ev=data.activity.filter(a=>a.show===s.name);document.getElementById('taskModalBody').innerHTML=`<h3 style="margin-top:0">${s.name} <span>${badge(s.type)}</span></h3><div class="timeline">${ev.length?ev.map(a=>`<div class="event"><span class="dot"></span><div><b>${a.a}</b><div>${a.d}</div><small class="muted">${a.u} · ${fmt(a.t)}</small></div></div>`).join(''):'<div class="empty">No activity yet.</div>'}</div>`;document.getElementById('taskModal').classList.add('open')}
+function syncSheet(){localStorage.setItem('showops_sheet_backup',JSON.stringify(data));toast('Prototype backup snapshot saved. Live Google Sheets sync is ready for integration.')}
+function downloadBackup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='showops-backup.json';a.click();URL.revokeObjectURL(a.href)}
+initNav();renderAll();
+document.addEventListener('click',function(e){const box=document.getElementById('showStatusMulti');const menu=document.getElementById('showStatusMenu');if(box&&menu&&!box.contains(e.target))menu.classList.remove('open');});
+</script>
+
+<script>
+window.showOpsApi = {
+  async state() {
+    if (!window.SHOWOPS_CONFIG.useBackend || !window.SHOWOPS_CONFIG.apiUrl) return null;
+    const r = await fetch(window.SHOWOPS_CONFIG.apiUrl + "?action=state", {credentials:"include"});
+    if (!r.ok) throw new Error("State request failed: " + r.status);
+    return await r.json();
+  },
+  async action(payload) {
+    if (!window.SHOWOPS_CONFIG.useBackend || !window.SHOWOPS_CONFIG.apiUrl) return null;
+    const r = await fetch(window.SHOWOPS_CONFIG.apiUrl, {
+      method:"POST", credentials:"include",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error("Action request failed: " + r.status);
+    return await r.json();
+  }
+};
+
+async function refreshFromGoogleSheet() {
+  if (!window.SHOWOPS_CONFIG.useBackend) return;
+  try {
+    const result = await window.showOpsApi.state();
+    if (result && result.data) {
+      data = result.data;
+      localStorage.setItem("showops_v2", JSON.stringify(data));
+      if (typeof renderAll === "function") renderAll();
+    }
+  } catch (e) {
+    console.warn("ShowOps sync:", e);
+  }
+}
+window.refreshFromGoogleSheet = refreshFromGoogleSheet;
+setInterval(refreshFromGoogleSheet, window.SHOWOPS_CONFIG.pollMs || 10000);
+</script>
+
+</body></html>
