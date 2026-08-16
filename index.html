@@ -76,7 +76,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 
 <script>
 window.SHOWOPS_CONFIG = {
-  apiUrl: "https://script.google.com/macros/s/AKfycbxyWPQI77EfGaeTHzsZap2kFL2hcalenQOXV8gkh4H6Wu1aXG0Sm_n_Rb48h9MRTSs/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbzuQIMdRpy8-Q2BVgb04kQJ8BEzx9bOuCn5h0tTCcXZJ8oJZCoy-q42PHwckMiWVAfc/exec",
   useBackend: true,
   pollMs: 10000
 };
@@ -534,14 +534,14 @@ document.addEventListener('click',function(e){const box=document.getElementById(
 window.showOpsApi = {
   async state() {
     if (!window.SHOWOPS_CONFIG.useBackend || !window.SHOWOPS_CONFIG.apiUrl) return null;
-    const r = await fetch(window.SHOWOPS_CONFIG.apiUrl + "?action=state", {credentials:"include"});
+    const r = await fetch(window.SHOWOPS_CONFIG.apiUrl + "?action=state", {redirect:"follow"});
     if (!r.ok) throw new Error("State request failed: " + r.status);
     return await r.json();
   },
   async action(payload) {
     if (!window.SHOWOPS_CONFIG.useBackend || !window.SHOWOPS_CONFIG.apiUrl) return null;
     const r = await fetch(window.SHOWOPS_CONFIG.apiUrl, {
-      method:"POST", credentials:"include",
+      method:"POST", redirect:"follow",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify(payload)
     });
