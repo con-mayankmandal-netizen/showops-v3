@@ -196,9 +196,9 @@ window.SHOWOPS_CONFIG = {
   </div>
   <div class="field"><label>Assign To</label><select id="rAssignee"></select></div>
   <div class="field full"><label>Task / Requirement *</label><textarea id="rTask" placeholder="Write the task / requirement..."></textarea></div>
-  <div class="field"><label>Priority</label><select id="rHml"><option>High</option><option>Medium</option><option>Low</option></select></div>
-  <div class="field"><label>P0 / P1 / P2</label><select id="rP"><option>P0</option><option>P1</option><option selected>P2</option></select></div>
-  <div class="field"><label>High Priority Flag</label><select id="rHigh"><option>No</option><option>Yes</option></select></div>
+  <div class="field" id="fPriority"><label>Priority <span id="priorityLockNote" style="font-weight:400;color:#aebbd1;font-size:10px"></span></label><select id="rHml"><option>High</option><option>Medium</option><option selected>Low</option></select></div>
+  <div class="field" id="fPLevel"><label>P0 / P1 / P2</label><select id="rP"><option>P0</option><option>P1</option><option selected>P2</option></select></div>
+  <div class="field" id="fHighFlag"><label>High Priority Flag</label><select id="rHigh"><option selected>No</option><option>Yes</option></select></div>
   <div class="field"><label>Deadline</label><input type="date" id="rDeadline"></div>
   <div class="field full"><label>Additional Details</label><textarea id="rDetails" placeholder="Optional context, links or notes..."></textarea></div>
  </div><div style="margin-top:15px"><button class="btn primary" onclick="submitRequest()">Submit Request</button></div></div>
@@ -524,6 +524,11 @@ function applyRoleUI(){
  document.querySelectorAll('#settings .btn.primary').forEach(b=>b.style.display=can('saveSettings')?'':'none');
  document.querySelectorAll('#settings .btn.danger').forEach(b=>b.style.display=can('archiveShow')?'':'none');
  document.querySelectorAll('#settings #deleteShowSelect').forEach(el=>el.style.display=can('archiveShow')?'':'none');
+ // Priority fields — only Manager can edit; others see locked defaults
+ const isManager=lvl>=5;
+ ['rHml','rP','rHigh'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=!isManager;el.style.opacity=isManager?'1':'0.5';el.style.cursor=isManager?'':'not-allowed';}});
+ const note=document.getElementById('priorityLockNote');
+ if(note)note.textContent=isManager?'':'(set by Manager)';
 }
 function renderShows(){
  const q=(document.getElementById('showSearch')?.value||'').toLowerCase(),tf=document.getElementById('showTypeFilter')?.value||'All Types';
