@@ -598,8 +598,28 @@ function teamNames(){return data.people.filter(p=>p.active&&['Manager','Lead','O
 function assign(id,name){const t=taskById(id);t.assignee=name;t.status=name?(t.status==='Unassigned'?'Assigned':t.status):'Unassigned';t.updated=new Date().toISOString();log('Task Assigned',showById(t.showId)?.name||'Adhoc',name||'Unassigned');save();renderAll();toast(name?'Task assigned to '+name:'Task unassigned');apiWrite({action:'assignTask',id,assignee:name,status:t.status,updated:t.updated,showName:showById(t.showId)?.name||'Adhoc',user:CURRENT_USER})}
 function bulkReassign(){const ids=[...document.querySelectorAll('.selTask:checked')].map(x=>x.value);if(!ids.length){toast('Select at least one task');return}const who=prompt('Assign selected tasks to:\\n'+teamNames().join(', '));if(!who||!teamNames().includes(who)){toast('Valid team member required');return}ids.forEach(id=>assignSilent(id,who));log('Bulk Reassign','Multiple Tasks',ids.length+' task(s) reassigned to '+who);save();renderAll();toast(ids.length+' task(s) reassigned')}
 function assignSilent(id,name){const t=taskById(id);t.assignee=name;t.status=t.status==='Unassigned'?'Assigned':t.status;t.updated=new Date().toISOString()}
-function updateTask(id){const t=taskById(id);document.getElementById('taskModalBody').innerHTML=`<div class="formgrid"><div class="field full"><label>${showById(t.showId)?.name||'Adhoc'} — ${t.task}</label></div><div class="field"><label>Status</label><select id="uStatus">${['Not Started','Assigned','In Progress','Blocked','Completed','Not Completed'].map(x=>`<option ${t.status===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Message</label><input id="uMsg" value="${String(t.message).replaceAll('"','&quot;')}"></div></div><button class="btn primary" style="margin-top:15px" onclick="saveTask('${id}')">${t.status==='Completed'?'Reopen / Save':'Save Update'}</button>`;document.getElementById('taskModal').classList.add('open')}
-function saveTask(id){const t=taskById(id),st=document.getElementById('uStatus').value,msg=document.getElementById('uMsg').value.trim()||st;const logAction=st==='Completed'?'Task Completed':st==='Not Completed'?'Task Marked Not Completed':'Task Updated';t.status=st;t.message=msg;t.updated=new Date().toISOString();log(logAction,showById(t.showId)?.name||'Adhoc',msg);save();closeModal('taskModal');renderAll();toast('Task updated');apiWrite({action:'updateTask',id,status:st,message:msg,updated:t.updated,assignee:t.assignee,showName:showById(t.showId)?.name||'Adhoc',logAction,user:CURRENT_USER})}
+function updateTask(id){
+ const t=taskById(id);
+ const isManager=roleLevel()>=5;
+ const priorityFields=isManager?`
+  <div class="field"><label>Priority (HML)</label><select id="uHml"><option ${t.hm==='High'?'selected':''}>High</option><option ${t.hm==='Medium'?'selected':''}>Medium</option><option ${t.hm==='Low'?'selected':''}>Low</option></select></div>
+  <div class="field"><label>P0 / P1 / P2</label><select id="uP"><option ${t.p==='P0'?'selected':''}>P0</option><option ${t.p==='P1'?'selected':''}>P1</option><option ${t.p==='P2'?'selected':''}>P2</option></select></div>
+  <div class="field"><label>High Priority Flag</label><select id="uHigh"><option ${!t.high?'selected':''}>No</option><option ${t.high?'selected':''}>Yes</option></select></div>`:'';
+ document.getElementById('taskModalBody').innerHTML=`<div class="formgrid"><div class="field full"><label>${showById(t.showId)?.name||'Adhoc'} — ${t.task}</label></div><div class="field"><label>Status</label><select id="uStatus">${['Not Started','Assigned','In Progress','Blocked','Completed','Not Completed'].map(x=>`<option ${t.status===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Message</label><input id="uMsg" value="${String(t.message).replaceAll('"','&quot;')}"></div>${priorityFields}</div><button class="btn primary" style="margin-top:15px" onclick="saveTask('${id}')">${t.status==='Completed'?'Reopen / Save':'Save Update'}</button>`;
+ document.getElementById('taskModal').classList.add('open');
+}
+function saveTask(id){
+ const t=taskById(id),st=document.getElementById('uStatus').value,msg=document.getElementById('uMsg').value.trim()||st;
+ const logAction=st==='Completed'?'Task Completed':st==='Not Completed'?'Task Marked Not Completed':'Task Updated';
+ t.status=st;t.message=msg;t.updated=new Date().toISOString();
+ // Manager can update priority fields from the update modal
+ if(roleLevel()>=5){
+  const uh=document.getElementById('uHml'),up=document.getElementById('uP'),uhi=document.getElementById('uHigh');
+  if(uh)t.hm=uh.value;if(up)t.p=up.value;if(uhi)t.high=uhi.value==='Yes';
+ }
+ log(logAction,showById(t.showId)?.name||'Adhoc',msg);save();closeModal('taskModal');renderAll();toast('Task updated');
+ apiWrite({action:'updateTask',id,status:st,message:msg,updated:t.updated,assignee:t.assignee,showName:showById(t.showId)?.name||'Adhoc',logAction,user:CURRENT_USER,hm:t.hm,p:t.p,high:t.high});
+}
 function renderTeam(){
  const selected=document.getElementById('teamPerson')?.value||'All Team';document.getElementById('teamPerson').innerHTML='<option>All Team</option>'+teamNames().map(n=>`<option>${n}</option>`).join('');document.getElementById('teamPerson').value=selected;
  const q=(document.getElementById('teamSearch')?.value||'').toLowerCase();const ts=data.tasks.filter(t=>(selected==='All Team'||t.assignee===selected)&&(t.task+' '+(showById(t.showId)?.name||'')).toLowerCase().includes(q));const active=ts.filter(t=>t.status!=='Completed').length;

@@ -175,10 +175,11 @@ function actAddTask(ss, p) {
 }
 
 function actUpdateTask(ss, p) {
-  updateRowWhere(ss.getSheetByName(SHEETS.TASKS), 'Task_ID', p.id, {
-    Status: p.status, Latest_Message: p.message,
-    Updated_At: p.updated, Assigned_To: p.assignee
-  });
+  const updates = { Status: p.status, Latest_Message: p.message, Updated_At: p.updated, Assigned_To: p.assignee };
+  if (p.hm  !== undefined) updates['HML']           = p.hm;
+  if (p.p   !== undefined) updates['P_Level']        = p.p;
+  if (p.high !== undefined) updates['High_Priority'] = p.high ? 'TRUE' : 'FALSE';
+  updateRowWhere(ss.getSheetByName(SHEETS.TASKS), 'Task_ID', p.id, updates);
   const tu = ss.getSheetByName(SHEETS.TASK_UPDATES);
   if (tu) tu.appendRow([p.id, p.status, p.message, p.user, p.updated]);
   actLog(ss, { u: p.user, a: p.logAction || 'Task Updated', show: p.showName, d: p.message });
