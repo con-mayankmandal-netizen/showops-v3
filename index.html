@@ -549,7 +549,9 @@ function isAfterHours(){
 function canAfterHours(){
  const p=data.people.find(x=>x.name===CURRENT_USER);
  if(!p)return false;
- return p.role==='Manager'||p.role==='Lead';
+ if(p.role==='Manager')return true;
+ if(p.role==='Lead')return p.after===true||p.after==='TRUE';
+ return false;
 }
 function checkRequestLock(){
  const afterHours=isAfterHours();
